@@ -57,7 +57,7 @@ end
 function query.askHeavy(instruction, prompt, opts, agent_host)
   local url = agent_host .. '/gemini'
   curl.get(url..'/clear', {callback = function() end})
-  local project_context = aiconfig.listScannedFiles()
+  local project_context = aiconfig.listScannedFilesFromConfig()
   local body_chunks = {}
   table.insert(body_chunks, {system_instruction = instruction})
   table.insert(body_chunks, {role = 'user', content = "I need your help on this project. " .. aiconfig.listScannedFilesAsText()})

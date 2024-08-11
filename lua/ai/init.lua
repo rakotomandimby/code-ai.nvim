@@ -154,7 +154,7 @@ function M.handle(name, input)
     args.output = (args.gemini_output or '') .. (args.chatgpt_output or '')
     update(M.fill(def.result_tpl or '${output}', args)) -- Update the popup directly
   end
-  local number_of_files = #aiconfig.listScannedFiles()
+  local number_of_files = #aiconfig.listScannedFilesFromConfig()
   if ((M.opts.gemini_agent_host == '' or M.chatgpt_agent_host == '') or number_of_files == 0) then
     gemini.ask(instruction, prompt,{handleResult = function(gemini_output)  return handleResult(gemini_output,  'gemini_output')  end,callback = function() end},M.opts.gemini_api_key)
     chatgpt.ask(instruction,prompt,{handleResult = function(chatgpt_output) return handleResult(chatgpt_output, 'chatgpt_output') end,callback = function() end},M.opts.chatgpt_api_key)

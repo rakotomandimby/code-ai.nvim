@@ -51,13 +51,15 @@ function aiconfig.listScannedFilesAsText()
     analyzed_files_as_string = "The project is composed of " .. #aiconfig.listScannedFilesFromConfig() .. " files: "
   end
   for i, file in ipairs(analyzed_files_as_array) do
+    if i == (#analyzed_files_as_array) then
+      return analyzed_files_as_string
+    end
     if i == (#analyzed_files_as_array - 1) then
       analyzed_files_as_string = analyzed_files_as_string .. analyzed_files_as_array[#analyzed_files_as_array-1] .. " and " .. analyzed_files_as_array[#analyzed_files_as_array] .. "."
     else
       analyzed_files_as_string = analyzed_files_as_string .. analyzed_files_as_array[i] .. ", "
     end
   end
-
   return analyzed_files_as_string
 end
 

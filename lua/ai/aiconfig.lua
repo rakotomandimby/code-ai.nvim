@@ -1,7 +1,7 @@
 local aiconfig = {}
 
-function aiconfig.findConfig()
-  local path = vim.fn.getcwd() .. '/.aiconfig'
+function aiconfig.findScannedFilesConfig()
+  local path = vim.fn.getcwd() .. '/.ai-scanned-files'
   local file = io.open(path, "r")
   if file ~= nil then
     io.close(file)
@@ -16,8 +16,8 @@ function aiconfig.getProjectRoot()
   return project_root
 end
 
-function aiconfig.listFilesFromConfig()
-  local config = aiconfig.findConfig()
+function aiconfig.listScannedFilesFromConfig()
+  local config = aiconfig.findScannedFilesConfig()
   if config == "" then
     return {}
   end
@@ -34,9 +34,27 @@ function aiconfig.listFilesFromConfig()
   return files
 end
 
+function aiconfig.listScannedFilesAsText()
+  local analyzed_files_as_array = aiconfig.listScannedFilesFromConfig()
+  if #analyzed_files_as_array == 0 then
+    return ""
+  end
+
+  local analyzed_files_as_string = ""
+  for i, file in ipairs(analyzed_files_as_array) do
+    if i == 1 then
+      analyzed_files_as_string = "The project is composed of one file: " .. file
+    elseif i == 2 then
+      analyzed_files_as_string = "The project is composed of two files: " .. analyzed_files_as_array[1] .. " and " .. file
+    else
+      analyzed_files_as_string = "The project is composed of " .. i .. " files: " .. analyzed_files_as_string .. ", " .. file
+    end
+  end
+
+  return analyzed_files_as_string
+end
+
 function aiconfig.contentOf(file)
-  local stat = vim.loop.fs_stat(file)
-  local size = stat and stat.size or "unknown"
   local f = io.open(file, "r")
   if f then
     local filecontent = f:read("*all")
@@ -47,8 +65,7 @@ function aiconfig.contentOf(file)
 end
 
 function aiconfig.listScannedFiles()
-  local analyzed_files_as_array = aiconfig.listFilesFromConfig()
-  
+  local analyzed_files_as_array = aiconfig.listScannedFilesFromConfig()
   if #analyzed_files_as_array == 0 then
     return "# No files to analyze under project root " .. aiconfig.getProjectRoot()
   end

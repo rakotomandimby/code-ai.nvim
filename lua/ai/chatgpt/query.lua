@@ -42,10 +42,10 @@ end
 function query.askHeavy(instruction, prompt, opts, agent_host)
   local url = agent_host .. '/chatgpt'
   curl.get(url..'/clear', {callback = function() end})
-  local project_context = aiconfig.listFilesFromConfig()
+  local project_context = aiconfig.listScannedFiles()
   local body_chunks = {}
   table.insert(body_chunks, {system_instruction = instruction})
-  table.insert(body_chunks, {role = 'user', content = "I need your help on this project."})
+  table.insert(body_chunks, {role = 'user', content = "I need your help on this project. " .. aiconfig.listScannedFilesAsText()})
   for _, context in pairs(project_context) do
     table.insert(body_chunks, {role = 'model', content = "What is the content of `" .. context .. "` ?"})
     table.insert(body_chunks, {role = 'user',  content = "The content of `" .. context .. "` is :\n```\n" .. aiconfig.contentOf(context) .. "\n```"})

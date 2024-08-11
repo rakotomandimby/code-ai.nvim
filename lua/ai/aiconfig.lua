@@ -43,9 +43,11 @@ function aiconfig.listScannedFilesAsText()
   local analyzed_files_as_string = ""
   if 1 == #aiconfig.listScannedFilesFromConfig() then
     analyzed_files_as_string = "The project is composed of one file: " .. analyzed_files_as_array[1] .. "."
+    return analyzed_files_as_string
   end
   if 2 == #aiconfig.listScannedFilesFromConfig() then
     analyzed_files_as_string = "The project is composed of two files: " .. analyzed_files_as_array[1] .. " and " .. analyzed_files_as_array[2] .. "."
+    return analyzed_files_as_string
   end
   if 3 <= #aiconfig.listScannedFilesFromConfig() then
     analyzed_files_as_string = "The project is composed of " .. #aiconfig.listScannedFilesFromConfig() .. " files: "

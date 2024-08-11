@@ -42,24 +42,24 @@ function aiconfig.listScannedFilesAsText()
 
   local analyzed_files_as_string = ""
   if 1 == #aiconfig.listScannedFilesFromConfig() then
-    analyzed_files_as_string = "The project is composed of one file: " .. analyzed_files_as_array[1] .. "."
+    analyzed_files_as_string = "The project is composed of one file: `" .. analyzed_files_as_array[1] .. "`."
     return analyzed_files_as_string
   end
   if 2 == #aiconfig.listScannedFilesFromConfig() then
-    analyzed_files_as_string = "The project is composed of two files: " .. analyzed_files_as_array[1] .. " and " .. analyzed_files_as_array[2] .. "."
+    analyzed_files_as_string = "The project is composed of two files: `" .. analyzed_files_as_array[1] .. "` and `" .. analyzed_files_as_array[2] .. "` ."
     return analyzed_files_as_string
   end
   if 3 <= #aiconfig.listScannedFilesFromConfig() then
     analyzed_files_as_string = "The project is composed of " .. #aiconfig.listScannedFilesFromConfig() .. " files: "
   end
-  for i, file in ipairs(analyzed_files_as_array) do
+  for i, _ in ipairs(analyzed_files_as_array) do
     if i == (#analyzed_files_as_array) then
       return analyzed_files_as_string
     end
     if i == (#analyzed_files_as_array - 1) then
-      analyzed_files_as_string = analyzed_files_as_string .. analyzed_files_as_array[#analyzed_files_as_array-1] .. " and " .. analyzed_files_as_array[#analyzed_files_as_array] .. "."
+      analyzed_files_as_string = analyzed_files_as_string .. " `" ..analyzed_files_as_array[#analyzed_files_as_array-1] .. "` and `" .. analyzed_files_as_array[#analyzed_files_as_array] .. "`."
     else
-      analyzed_files_as_string = analyzed_files_as_string .. analyzed_files_as_array[i] .. ", "
+      analyzed_files_as_string = analyzed_files_as_string .. " `"..analyzed_files_as_array[i] .. "` ,"
     end
   end
   return analyzed_files_as_string

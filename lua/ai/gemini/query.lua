@@ -23,7 +23,15 @@ function query.formatResult(data)
       result = '\n#Gemini error\n\nGemini stopped with the reason: ' .. data['candidates'][1]['finishReason'] .. '\n'
       return result
     else
-      result = '\n# This is Gemini answer\n\n'
+      -- Extract token counts from the response
+      local prompt_tokens = data['usageMetadata']['promptTokenCount']
+      local answer_tokens = data['usageMetadata']['candidatesTokenCount']
+
+      -- Format token counts (e.g., "30k", "2k")
+      local formatted_prompt_tokens = string.format("%gk", math.floor(prompt_tokens / 1000))
+      local formatted_answer_tokens = string.format("%gk", math.floor(answer_tokens / 1000))
+
+      result = '\n# This is Gemini answer (' .. formatted_prompt_tokens .. ' in, ' .. formatted_answer_tokens .. ' out)\n\n' -- Add token counts to the output
       result = result .. query.escapePercent(data['candidates'][1]['content']['parts'][1]['text']) .. '\n'
     end
   else

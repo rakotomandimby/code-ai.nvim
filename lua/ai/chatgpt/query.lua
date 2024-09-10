@@ -16,7 +16,16 @@ function query.escapePercent(s)
 end
 
 function query.formatResult(data)
-  local result = '\n# This is ChatGPT answer\n\n'
+  -- Extract token counts from the response
+  local prompt_tokens = data.usage.prompt_tokens
+  local completion_tokens = data.usage.completion_tokens
+
+  -- Format token counts (e.g., "30k", "2k")
+  local formatted_prompt_tokens = string.format("%gk", math.floor(prompt_tokens / 1000))
+  local formatted_completion_tokens = string.format("%gk", math.floor(completion_tokens / 1000))
+
+  -- Create the result string with token counts
+  local result = '\n# This is ChatGPT answer (' .. formatted_prompt_tokens .. ' in, ' .. formatted_completion_tokens .. ' out)\n\n'
   result = result .. data.choices[1].message.content .. '\n\n'
   return query.escapePercent(result)
 end

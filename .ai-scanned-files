@@ -1,3 +1,4 @@
+-c*
 +**/*.lua
--lua/ai*.lua
+-lua/ai/ai*.lua
 +*.json

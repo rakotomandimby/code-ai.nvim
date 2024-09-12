@@ -1,2 +1,3 @@
-**/*.lua
-*.json
++**/*.lua
+-lua/ai*.lua
++*.json

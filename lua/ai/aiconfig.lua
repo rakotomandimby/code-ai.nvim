@@ -21,17 +21,42 @@ function aiconfig.listScannedFilesFromConfig()
   if config == "" then
     return {}
   end
-  local patterns = {}
+
+  local include_patterns = {}
+  local exclude_patterns = {}
+
+  -- Read the config file and separate include and exclude patterns
   for line in io.lines(config) do
-    table.insert(patterns, line)
-  end
-  local files = {}
-  for _, pattern in ipairs(patterns) do
-    for _, file in ipairs(vim.fn.glob(pattern, false, true)) do
-      table.insert(files, file)
+    local trimmed_line = vim.trim(line)
+    if vim.startswith(trimmed_line, "+") then
+      table.insert(include_patterns, trimmed_line:sub(2)) -- Remove the '+' and add to include patterns
+    elseif vim.startswith(trimmed_line, "-") then
+      table.insert(exclude_patterns, trimmed_line:sub(2)) -- Remove the '-' and add to exclude patterns
     end
   end
-  return files
+
+  -- Step 1: Gather all files that match the include patterns
+  local included_files = {}
+  for _, pattern in ipairs(include_patterns) do
+    for _, file in ipairs(vim.fn.glob(pattern, false, true)) do
+      included_files[file] = true -- Use a table to avoid duplicates
+    end
+  end
+
+  -- Step 2: Remove files that match the exclude patterns
+  for _, pattern in ipairs(exclude_patterns) do
+    for _, file in ipairs(vim.fn.glob(pattern, false, true)) do
+      included_files[file] = nil -- Remove excluded files
+    end
+  end
+
+  -- Step 3: Convert the table back to a list
+  local final_files = {}
+  for file, _ in pairs(included_files) do
+    table.insert(final_files, file)
+  end
+
+  return final_files
 end
 
 function aiconfig.listScannedFilesAsText()

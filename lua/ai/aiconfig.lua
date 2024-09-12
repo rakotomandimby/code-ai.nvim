@@ -56,6 +56,8 @@ function aiconfig.listScannedFilesFromConfig()
     table.insert(final_files, file)
   end
 
+  -- Sort final_files before returning it
+  table.sort(final_files)
   return final_files
 end
 

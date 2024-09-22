@@ -72,9 +72,7 @@ function query.askHeavy(instruction, prompt, opts, agent_host)
   table.insert(body_chunks, {role = 'model', content = "Tell me the project file structure."})
   table.insert(body_chunks, {role = 'user',  content = aiconfig.listScannedFilesAsText()})
   for _, context in pairs(project_context) do
-    if aiconfig.contentOf(context) == nil then
-      warn("The content of `" .. context .. "` is nil.")
-    else
+    if aiconfig.contentOf(context) ~= nil then
       table.insert(body_chunks, {role = 'model', content = "What is the content of `" .. context .. "` ?"})
       table.insert(body_chunks, {role = 'user',  content = "The content of `" .. context .. "` is :\n```\n" .. aiconfig.contentOf(context) .. "\n```"})
     end

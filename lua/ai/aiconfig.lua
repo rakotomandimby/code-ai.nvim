@@ -53,7 +53,10 @@ function aiconfig.listScannedFilesFromConfig()
   -- Step 3: Convert the table back to a list
   local final_files = {}
   for file, _ in pairs(included_files) do
-    table.insert(final_files, file)
+    local file_info = vim.loop.fs_stat(file)
+    if file_info and file_info.type == 'file' then
+      table.insert(final_files, file)
+    end
   end
 
   -- Sort final_files before returning it

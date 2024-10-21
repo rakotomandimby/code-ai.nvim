@@ -79,7 +79,7 @@ function query.askHeavy(instruction, prompt, opts, agent_host)
   end
   table.insert(body_chunks, {role = 'model', content = "Then what do you want me to do with all that information?"})
   table.insert(body_chunks, {role = 'user', content = prompt})
-  table.insert(body_chunks, {model_to_use = 'gemini-1.5-pro-latest'})
+  table.insert(body_chunks, {model_to_use = 'gemini-1.5-flash-latest'})
   table.insert(body_chunks, {temperature = 0.2})
   table.insert(body_chunks, {top_p = 0.5})
   table.insert(body_chunks, {})
@@ -102,7 +102,7 @@ function query.ask(instruction, prompt, opts, api_key)
   query.log("entered gemini query.ask")
   local api_host = 'https://generativelanguage.googleapis.com'
   -- local api_host = 'https://eowloffrpvxwtqp.m.pipedream.net'
-  local path = '/v1beta/models/gemini-1.5-pro-latest:generateContent'
+  local path = '/v1beta/models/gemini-1.5-flash-latest:generateContent'
   curl.post(api_host .. path,
     {
       headers = {

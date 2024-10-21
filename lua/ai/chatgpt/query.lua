@@ -65,7 +65,7 @@ function query.askHeavy(instruction, prompt, opts, agent_host)
   end
   table.insert(body_chunks, {role = 'model', content = "Then what do you want me to do with all that information?"})
   table.insert(body_chunks, {role = 'user', content = prompt})
-  table.insert(body_chunks, {model_to_use = 'chatgpt-4o-latest'})
+  table.insert(body_chunks, {model_to_use = 'o1-mini'})
   table.insert(body_chunks, {temperature = 0.2})
   table.insert(body_chunks, {top_p = 0.1})
   table.insert(body_chunks, {})
@@ -97,7 +97,7 @@ function query.ask(instruction, prompt, opts, api_key)
       },
       body = vim.fn.json_encode(
         {
-          model = 'gpt-4-turbo',
+          model = 'o1-mini',
           messages = (function()
             local messages = {}
             table.insert(messages, { role = 'system', content = instruction })

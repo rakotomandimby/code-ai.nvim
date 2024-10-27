@@ -2,7 +2,7 @@
 
 I would like first to thank [gera2ld](https://github.com/gera2ld) for his work on [ai.nvim](https://github.com/gera2ld/ai.nvim), because this plugin is a fork of his work. 
 Without his plugin, there wouldnt be this one.
-Thank you @gera2ld for your work.
+Thank you Gerald for your work.
 
 # code-ai.nvim
 
@@ -18,6 +18,8 @@ First get API keys from [Google Cloud](https://ai.google.dev/gemini-api/docs/api
 
 Using Lazy.nvim:
 
+For simple usage,
+
 ```lua
 {
   'natixgroup/code-ai.nvim',
@@ -30,6 +32,7 @@ Using Lazy.nvim:
     -- But if you prefer it to get the focus, set to true.
     result_popup_gets_focus = false,
     -- Define custom prompts here, see below for more details
+    locale = 'en',
     prompts = {
         javascript_vanilla = {
             command = 'AIJavascriptVanilla',
@@ -44,6 +47,41 @@ Using Lazy.nvim:
   event = 'VimEnter',
 },
 ```
+
+
+For usage with the agent,
+
+```lua
+{
+  'natixgroup/code-ai.nvim',
+  dependencies = 'nvim-lua/plenary.nvim',
+  opts = {
+    gemini_api_key = 'YOUR_GEMINI_API_KEY', -- or read from env: `os.getenv('GEMINI_API_KEY')`
+    chatgtp_api_key = 'YOUR_CHATGPT_API_KEY', -- or read from env: `os.getenv('CHATGPT_API_KEY')`
+    gemini_agent_host='http://172.16.76.1:5000',
+    chatgpt_agent_host='http://172.16.76.1:4000',
+    -- Gemini's answer is displayed in a popup buffer
+    -- Default behaviour is not to give it the focus because it is seen as a kind of tooltip
+    -- But if you prefer it to get the focus, set to true.
+    result_popup_gets_focus = false,
+    -- Define custom prompts here, see below for more details
+    locale = 'en',
+    prompts = {
+        javascript_vanilla = {
+            command = 'AIJavascriptVanilla',
+            instruction_tpl = 'Act as a Vanilla Javascript developer. Format you answer with Markdown.',
+            prompt_tpl = '${input}',
+            result_tpl = '${output}',
+            loading_tpl = 'Loading...',
+            require_input = true,
+        },
+    },
+  },
+  event = 'VimEnter',
+},
+```
+
+
 
 ## Usage
 
@@ -62,9 +100,7 @@ Placeholders can be used in templates. If not available, it will be left as is.
 | Placeholders          | Description                                                                                | Availability      |
 | --------------------- | ------------------------------------------------------------------------------------------ | ----------------- |
 | `${locale}`           | `opts.locale`                                                                              | Always            |
-| `${alternate_locale}` | `opts.alternate_locale`                                                                    | Always            |
 | `${input}`            | The text selected or passed to the command.                                                | Always            |
-| `${input_encoded}`    | The text encoded with JSON so that Gemini will take it as literal instead of a new prompt. | Always            |
 | `${output}`           | The result returned by Gemini.                                                             | After the request |
 
 

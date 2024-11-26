@@ -176,7 +176,7 @@ function M.handle(name, input)
     chatgpt.ask(M.opts.chatgpt_model, instruction,prompt,{handleResult = function(chatgpt_output) return handleResult(chatgpt_output, 'chatgpt_output') end,callback = function() end},M.opts.chatgpt_api_key)
   else
     M.log("Using agents")
-    gemini.askHeavy(M.opt.gemini_model, instruction,prompt, {handleResult = function(gemini_output)  return handleResult(gemini_output,  'gemini_output')  end,callback = function() end},M.opts.gemini_agent_host)
+    gemini.askHeavy(M.opts.gemini_model, instruction,prompt, {handleResult = function(gemini_output)  return handleResult(gemini_output,  'gemini_output')  end,callback = function() end},M.opts.gemini_agent_host)
     chatgpt.askHeavy(M.opts.chatgpt_model, instruction,prompt,{handleResult = function(chatgpt_output) return handleResult(chatgpt_output, 'chatgpt_output') end,callback = function() end},M.opts.chatgpt_agent_host)
   end
 end

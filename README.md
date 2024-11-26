@@ -12,6 +12,15 @@ Here is a demo:
 ![demo](./demo-code-ai.gif)
 
 
+# How it works
+
+- The plugin resides in Neovim.
+  - It scans the files corresponding to the patterns defined in [.ai-scanned-files](./.ai-scanned-files)
+- If the agent URL are defined, it will send the prompt to the agent, which will send it to the corresponding API.
+- If the agent URL are not defined, it will send the prompt to the API directly.
+
+
+
 ## Installation
 
 First get API keys from [Google Cloud](https://ai.google.dev/gemini-api/docs/api-key) and [ChatGPT](https://platform.openai.com/api-keys) and set them in your environment:

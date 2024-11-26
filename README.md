@@ -15,10 +15,14 @@ Here is a demo:
 # How it works
 
 - The plugin resides in Neovim.
-  - It scans the files corresponding to the patterns defined in [.ai-scanned-files](./.ai-scanned-files)
-- If the agent URL are defined, it will send the prompt to the agent, which will send it to the corresponding API.
-- If the agent URL are not defined, it will send the prompt to the API directly.
-
+- If the agents URLs are defined, it will send the prompt to the agent, which will send it to the corresponding LLM API.
+  - It scans the files corresponding to the patterns defined in [.ai-scanned-files](./.ai-scanned-files) and builds a multi-turn chat from them.
+  - It sends the [multi-turn chat and the prompt](./documentation/multi-turn-chat.json) to the agents
+  - It receives the response from the agents and displays it in a popup
+- If the agent URL are not defined, it will send the prompt directly to the corresponding LLM API.
+  - It **does not scan** any files
+  - It **does not build a multi-turn chat** but directly sends the prompt to the LLM API
+  - It receives the response from the agents and displays it in a popup
 
 
 ## Installation
@@ -102,14 +106,14 @@ First get API keys from [Google Cloud](https://ai.google.dev/gemini-api/docs/api
 
 The prompts will be merged into built-in prompts. Here are the available fields for each prompt:
 
-| Fields          | Required | Description                                                                                      |
-| --------------- | -------- | ------------------------------------------------------------------------------------------------ |
-| `command`       | No       | A user command will be created for this prompt.                                                  |
-| `instruction_tpl` | Yes    | Template for the instruction given to the model                                                  |                         
-| `loading_tpl`   | No       | Template for content shown when communicating with Gemini. See below for available placeholders. |
-| `prompt_tpl`    | Yes      | Template for the prompt string passed to Gemini. See below for available placeholders.           |
-| `result_tpl`    | No       | Template for the result shown in the popup. See below for available placeholders.                |
-| `require_input` | No       | If set to `true`, the prompt will only be sent if text is selected or passed to the command.     |
+| Fields            | Required | Description                                                                                      |
+| ---------------   | -------- | ------------------------------------------------------------------------------------------------ |
+| `command`         | No       | A user command will be created for this prompt.                                                  |
+| `instruction_tpl` | Yes      | Template for the instruction given to the model                                                  |                         
+| `loading_tpl`     | No       | Template for content shown when communicating with Gemini. See below for available placeholders. |
+| `prompt_tpl`      | Yes      | Template for the prompt string passed to Gemini. See below for available placeholders.           |
+| `result_tpl`      | No       | Template for the result shown in the popup. See below for available placeholders.                |
+| `require_input`   | No       | If set to `true`, the prompt will only be sent if text is selected or passed to the command.     |
 
 Placeholders can be used in templates. If not available, it will be left as is.
 

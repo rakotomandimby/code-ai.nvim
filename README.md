@@ -29,7 +29,7 @@ Here is a demo:
 
 First get API keys from [Google Cloud](https://ai.google.dev/gemini-api/docs/api-key) and [ChatGPT](https://platform.openai.com/api-keys) and set them in your environment:
 
-### For usage without the agents,
+### For usage **without** the agents,
 
 ```lua
 {
@@ -63,7 +63,7 @@ First get API keys from [Google Cloud](https://ai.google.dev/gemini-api/docs/api
 ```
 
 
-### For usage *with the agent*,
+### For usage **with the agent** ,
 
 ```lua
 {

@@ -24,12 +24,18 @@ Here is a demo:
   - It **does not build a multi-turn chat** but directly sends the prompt to the LLM API
   - It receives the response from the agents and displays it in a popup
 
+# The agent
+
+You can find the agent in the repository [code-ai-agent](https://github.com/rakotomandimby/code-ai-agent).
 
 ## Installation
 
 First get API keys from [Google Cloud](https://ai.google.dev/gemini-api/docs/api-key) and [ChatGPT](https://platform.openai.com/api-keys) and set them in your environment:
 
-For usage **WITHOUT** the agents,
+For usage **WITHOUT** the agents, **don't set** the `gemini_agent_host` and `chatgpt_agent_host`.
+For usage **WITH** the agents, **set** the `gemini_agent_host` and `chatgpt_agent_host`.
+
+This is the configuration for the plugin:
 
 ```lua
 {
@@ -38,42 +44,8 @@ For usage **WITHOUT** the agents,
   opts = {
     gemini_api_key = 'YOUR_GEMINI_API_KEY', -- or read from env: `os.getenv('GEMINI_API_KEY')`
     chatgtp_api_key = 'YOUR_CHATGPT_API_KEY', -- or read from env: `os.getenv('CHATGPT_API_KEY')`
-    result_popup_gets_focus = true,
-    -- Define custom prompts here, see below for more details
-    locale = 'en',
-    prompts = {
-        javascript_vanilla = {
-            command = 'AIJavascriptVanilla',
-            instruction_tpl = 'Act as a Vanilla Javascript developer. Format you answer with Markdown.',
-            prompt_tpl = '${input}',
-            result_tpl = '${output}',
-            require_input = true,
-        },
-        php_bare = {
-            command = 'AIPhpBare',
-            instruction_tpl = 'Act as a PHP developer. Format you answer with Markdown.',
-            prompt_tpl = '${input}',
-            result_tpl = '${output}',
-            require_input = true,
-        },
-    },
-  },
-  event = 'VimEnter',
-},
-```
-
-
-For usage **WITH** the agents,
-
-```lua
-{
-  'rakotomandimby/code-ai.nvim',
-  dependencies = 'nvim-lua/plenary.nvim',
-  opts = {
-    gemini_api_key = 'YOUR_GEMINI_API_KEY', -- or read from env: `os.getenv('GEMINI_API_KEY')`
-    chatgtp_api_key = 'YOUR_CHATGPT_API_KEY', -- or read from env: `os.getenv('CHATGPT_API_KEY')`
-    gemini_agent_host='http://172.16.76.1:5000',
-    chatgpt_agent_host='http://172.16.76.1:4000',
+    gemini_agent_host='http://172.16.76.1:5000', -- dont set if you dont want to use the agent
+    chatgpt_agent_host='http://172.16.76.1:4000', -- dont set if you dont want to use the agent
     result_popup_gets_focus = true,
     -- Define custom prompts here, see below for more details
     locale = 'en',
@@ -99,10 +71,15 @@ For usage **WITH** the agents,
   event = 'VimEnter',
 },
 ```
-
-
 
 ## Usage
+
+If you ave configured the plugin following the instructions above, you can use the plugin by:
+- Selecting a text in normal model
+- Pressing `:` to enter the command mode
+- Typing `AIJavascriptVanilla` or `AIPhpBare` and pressing `Enter`
+
+# Several documentation
 
 The prompts will be merged into built-in prompts. Here are the available fields for each prompt:
 

@@ -146,8 +146,19 @@ function M.handle(name, input)
     input = input,
     input_encoded = vim.fn.json_encode(input),
   }
-  local scanned_files = aiconfig.listScannedFiles()
-  local update = M.createPopup(M.fill(def.loading_tpl .. scanned_files, args), width - 12, height - 8)
+
+  local number_of_files = #aiconfig.listScannedFilesFromConfig()
+  local use_gemini_agent = M.opts.gemini_agent_host ~= ''
+  local use_chatgpt_agent = M.opts.chatgpt_agent_host ~= ''
+
+  local update = nil
+
+  if (number_of_files == 0 or not use_gemini_agent or not use_chatgpt_agent ) then
+    update = M.createPopup(M.fill(def.loading_tpl , args), width - 4, height - 4)
+  else
+    local scanned_files = aiconfig.listScannedFiles()
+    update = M.createPopup(M.fill(def.loading_tpl .. scanned_files, args), width - 4, height - 4)
+  end
   local prompt = M.fill(def.prompt_tpl, args)
   local instruction = M.fill(def.instruction_tpl, args)
 
@@ -156,10 +167,6 @@ function M.handle(name, input)
     args.output = (args.gemini_output or '') .. (args.chatgpt_output or '')
     update(M.fill(def.result_tpl or '${output}', args)) -- Update the popup directly
   end
-  local number_of_files = #aiconfig.listScannedFilesFromConfig()
-
-  local use_gemini_agent = M.opts.gemini_agent_host ~= ''
-  local use_chatgpt_agent = M.opts.chatgpt_agent_host ~= ''
 
   if (number_of_files == 0 or not use_gemini_agent or not use_chatgpt_agent ) then
     M.log("Not using agents")

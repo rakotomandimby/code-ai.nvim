@@ -15,6 +15,8 @@ local default_prompts = {
 
 local M = {}
 M.opts = {
+  gemini_model = '',
+  chatgpt_model = '',
   gemini_agent_host = '',
   chatgpt_agent_host = '',
   gemini_api_key = '',
@@ -170,12 +172,12 @@ function M.handle(name, input)
 
   if (number_of_files == 0 or not use_gemini_agent or not use_chatgpt_agent ) then
     M.log("Not using agents")
-    gemini.ask(instruction, prompt,{handleResult = function(gemini_output)  return handleResult(gemini_output,  'gemini_output')  end,callback = function() end},M.opts.gemini_api_key)
-    chatgpt.ask(instruction,prompt,{handleResult = function(chatgpt_output) return handleResult(chatgpt_output, 'chatgpt_output') end,callback = function() end},M.opts.chatgpt_api_key)
+    gemini.ask(gemini_model, instruction, prompt,{handleResult = function(gemini_output)  return handleResult(gemini_output,  'gemini_output')  end,callback = function() end},M.opts.gemini_api_key)
+    chatgpt.ask(chatgpt_model, instruction,prompt,{handleResult = function(chatgpt_output) return handleResult(chatgpt_output, 'chatgpt_output') end,callback = function() end},M.opts.chatgpt_api_key)
   else
     M.log("Using agents")
-    gemini.askHeavy(instruction,prompt, {handleResult = function(gemini_output)  return handleResult(gemini_output,  'gemini_output')  end,callback = function() end},M.opts.gemini_agent_host)
-    chatgpt.askHeavy(instruction,prompt,{handleResult = function(chatgpt_output) return handleResult(chatgpt_output, 'chatgpt_output') end,callback = function() end},M.opts.chatgpt_agent_host)
+    gemini.askHeavy(gemini_model, instruction,prompt, {handleResult = function(gemini_output)  return handleResult(gemini_output,  'gemini_output')  end,callback = function() end},M.opts.gemini_agent_host)
+    chatgpt.askHeavy(chatgpt_model, instruction,prompt,{handleResult = function(chatgpt_output) return handleResult(chatgpt_output, 'chatgpt_output') end,callback = function() end},M.opts.chatgpt_agent_host)
   end
 end
 

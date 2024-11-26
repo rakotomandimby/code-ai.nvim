@@ -62,7 +62,7 @@ function query.askCallback(res, opts)
   opts.callback(result)
 end
 
-function query.askHeavy(instruction, prompt, opts, agent_host)
+function query.askHeavy(model, instruction, prompt, opts, agent_host)
   local url = agent_host .. '/gemini'
   curl.get(url..'/clear', {callback = function() end})
   local project_context = aiconfig.listScannedFilesFromConfig()
@@ -79,7 +79,7 @@ function query.askHeavy(instruction, prompt, opts, agent_host)
   end
   table.insert(body_chunks, {role = 'model', content = "Then what do you want me to do with all that information?"})
   table.insert(body_chunks, {role = 'user', content = prompt})
-  table.insert(body_chunks, {model_to_use = 'gemini-1.5-flash-latest'})
+  table.insert(body_chunks, {model_to_use = model})
   table.insert(body_chunks, {temperature = 0.2})
   table.insert(body_chunks, {top_p = 0.5})
   table.insert(body_chunks, {})
@@ -98,10 +98,10 @@ function query.askHeavy(instruction, prompt, opts, agent_host)
   end
 end
 
-function query.ask(instruction, prompt, opts, api_key)
+function query.ask(model, instruction, prompt, opts, api_key)
   local api_host = 'https://generativelanguage.googleapis.com'
   -- local api_host = 'https://eowloffrpvxwtqp.m.pipedream.net'
-  local path = '/v1beta/models/gemini-1.5-flash-latest:generateContent'
+  local path = '/v1beta/models/' .. model .. ':generateContent'
   curl.post(api_host .. path,
     {
       headers = {

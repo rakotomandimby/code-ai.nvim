@@ -48,7 +48,7 @@ function query.askCallback(res, opts)
   opts.callback(result)
 end
 
-function query.askHeavy(instruction, prompt, opts, agent_host)
+function query.askHeavy(model, instruction, prompt, opts, agent_host)
   local url = agent_host .. '/chatgpt'
   curl.get(url..'/clear', {callback = function() end})
   local project_context = aiconfig.listScannedFilesFromConfig()
@@ -65,7 +65,7 @@ function query.askHeavy(instruction, prompt, opts, agent_host)
   end
   table.insert(body_chunks, {role = 'model', content = "Then what do you want me to do with all that information?"})
   table.insert(body_chunks, {role = 'user', content = prompt})
-  table.insert(body_chunks, {model_to_use = 'gpt-4o-mini'})
+  table.insert(body_chunks, {model_to_use = model})
   table.insert(body_chunks, {temperature = 0.2})
   table.insert(body_chunks, {top_p = 0.1})
   table.insert(body_chunks, {})
@@ -85,7 +85,7 @@ function query.askHeavy(instruction, prompt, opts, agent_host)
 end
 
 
-function query.ask(instruction, prompt, opts, api_key)
+function query.ask(model, instruction, prompt, opts, api_key)
   local api_host = 'https://api.openai.com'
   -- local api_host = 'https://eowloffrpvxwtqp.m.pipedream.net'
   local path = '/v1/chat/completions'
@@ -97,7 +97,7 @@ function query.ask(instruction, prompt, opts, api_key)
       },
       body = vim.fn.json_encode(
         {
-          model = 'gpt-4o-mini',
+          model = model,
           messages = (function()
             local messages = {}
             table.insert(messages, { role = 'system', content = instruction })

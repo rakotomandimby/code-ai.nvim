@@ -25,21 +25,52 @@ Here is a demo:
 
 First get API keys from [Google Cloud](https://ai.google.dev/gemini-api/docs/api-key) and [ChatGPT](https://platform.openai.com/api-keys) and set them in your environment:
 
-Using Lazy.nvim:
-
-For simple usage,
+### For usage without the agents,
 
 ```lua
 {
-  'natixgroup/code-ai.nvim',
+  'rakotomandimby/code-ai.nvim',
   dependencies = 'nvim-lua/plenary.nvim',
   opts = {
     gemini_api_key = 'YOUR_GEMINI_API_KEY', -- or read from env: `os.getenv('GEMINI_API_KEY')`
     chatgtp_api_key = 'YOUR_CHATGPT_API_KEY', -- or read from env: `os.getenv('CHATGPT_API_KEY')`
-    -- Gemini's answer is displayed in a popup buffer
-    -- Default behaviour is not to give it the focus because it is seen as a kind of tooltip
-    -- But if you prefer it to get the focus, set to true.
-    result_popup_gets_focus = false,
+    result_popup_gets_focus = true,
+    -- Define custom prompts here, see below for more details
+    locale = 'en',
+    prompts = {
+        javascript_vanilla = {
+            command = 'AIJavascriptVanilla',
+            instruction_tpl = 'Act as a Vanilla Javascript developer. Format you answer with Markdown.',
+            prompt_tpl = '${input}',
+            result_tpl = '${output}',
+            require_input = true,
+        },
+        php_bare = {
+            command = 'AIPhpBare',
+            instruction_tpl = 'Act as a PHP developer. Format you answer with Markdown.',
+            prompt_tpl = '${input}',
+            result_tpl = '${output}',
+            require_input = true,
+        },
+    },
+  },
+  event = 'VimEnter',
+},
+```
+
+
+### For usage *with the agent*,
+
+```lua
+{
+  'rakotomandimby/code-ai.nvim',
+  dependencies = 'nvim-lua/plenary.nvim',
+  opts = {
+    gemini_api_key = 'YOUR_GEMINI_API_KEY', -- or read from env: `os.getenv('GEMINI_API_KEY')`
+    chatgtp_api_key = 'YOUR_CHATGPT_API_KEY', -- or read from env: `os.getenv('CHATGPT_API_KEY')`
+    gemini_agent_host='http://172.16.76.1:5000',
+    chatgpt_agent_host='http://172.16.76.1:4000',
+    result_popup_gets_focus = true,
     -- Define custom prompts here, see below for more details
     locale = 'en',
     prompts = {
@@ -51,34 +82,9 @@ For simple usage,
             loading_tpl = 'Loading...',
             require_input = true,
         },
-    },
-  },
-  event = 'VimEnter',
-},
-```
-
-
-For usage with the agent,
-
-```lua
-{
-  'natixgroup/code-ai.nvim',
-  dependencies = 'nvim-lua/plenary.nvim',
-  opts = {
-    gemini_api_key = 'YOUR_GEMINI_API_KEY', -- or read from env: `os.getenv('GEMINI_API_KEY')`
-    chatgtp_api_key = 'YOUR_CHATGPT_API_KEY', -- or read from env: `os.getenv('CHATGPT_API_KEY')`
-    gemini_agent_host='http://172.16.76.1:5000',
-    chatgpt_agent_host='http://172.16.76.1:4000',
-    -- Gemini's answer is displayed in a popup buffer
-    -- Default behaviour is not to give it the focus because it is seen as a kind of tooltip
-    -- But if you prefer it to get the focus, set to true.
-    result_popup_gets_focus = false,
-    -- Define custom prompts here, see below for more details
-    locale = 'en',
-    prompts = {
-        javascript_vanilla = {
-            command = 'AIJavascriptVanilla',
-            instruction_tpl = 'Act as a Vanilla Javascript developer. Format you answer with Markdown.',
+        php_bare = {
+            command = 'AIPhpBare',
+            instruction_tpl = 'Act as a PHP developer. Format you answer with Markdown.',
             prompt_tpl = '${input}',
             result_tpl = '${output}',
             loading_tpl = 'Loading...',
@@ -98,7 +104,8 @@ The prompts will be merged into built-in prompts. Here are the available fields 
 
 | Fields          | Required | Description                                                                                      |
 | --------------- | -------- | ------------------------------------------------------------------------------------------------ |
-| `command`       | No       | If defined, a user command will be created for this prompt.                                      |
+| `command`       | No       | A user command will be created for this prompt.                                                  |
+| `instruction_tpl` | Yes    | Template for the instruction given to the model                                                  |                         
 | `loading_tpl`   | No       | Template for content shown when communicating with Gemini. See below for available placeholders. |
 | `prompt_tpl`    | Yes      | Template for the prompt string passed to Gemini. See below for available placeholders.           |
 | `result_tpl`    | No       | Template for the result shown in the popup. See below for available placeholders.                |

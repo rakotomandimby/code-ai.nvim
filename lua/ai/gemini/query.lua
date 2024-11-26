@@ -99,10 +99,9 @@ function query.askHeavy(instruction, prompt, opts, agent_host)
 end
 
 function query.ask(instruction, prompt, opts, api_key)
-  query.log("entered gemini query.ask")
   local api_host = 'https://generativelanguage.googleapis.com'
   -- local api_host = 'https://eowloffrpvxwtqp.m.pipedream.net'
-  local path = '/v1beta/models/gemini-1.5-pro-latest:generateContent'
+  local path = '/v1beta/models/gemini-1.5-flash-latest:generateContent'
   curl.post(api_host .. path,
     {
       headers = {

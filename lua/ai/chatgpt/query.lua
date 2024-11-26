@@ -97,7 +97,7 @@ function query.ask(instruction, prompt, opts, api_key)
       },
       body = vim.fn.json_encode(
         {
-          model = 'chatgpt-4o-latest',
+          model = 'gpt-4o-mini',
           messages = (function()
             local messages = {}
             table.insert(messages, { role = 'system', content = instruction })

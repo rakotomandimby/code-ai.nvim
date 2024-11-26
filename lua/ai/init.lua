@@ -156,10 +156,10 @@ function M.handle(name, input)
   local update = nil
 
   if (number_of_files == 0 or not use_gemini_agent or not use_chatgpt_agent ) then
-    update = M.createPopup(M.fill(def.loading_tpl , args), width - 4, height - 4)
+    update = M.createPopup(M.fill(def.loading_tpl , args), width - 8, height - 4)
   else
     local scanned_files = aiconfig.listScannedFiles()
-    update = M.createPopup(M.fill(def.loading_tpl .. scanned_files, args), width - 4, height - 4)
+    update = M.createPopup(M.fill(def.loading_tpl .. scanned_files, args), width - 8, height - 4)
   end
   local prompt = M.fill(def.prompt_tpl, args)
   local instruction = M.fill(def.instruction_tpl, args)

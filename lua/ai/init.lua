@@ -158,18 +158,10 @@ function M.handle(name, input)
   end
   local number_of_files = #aiconfig.listScannedFilesFromConfig()
 
-  -- If M.opts.gemini_agent_host is not set, set it to an empty string
-  if M.opts.gemini_agent_host == nil then
-    M.opts.gemini_agent_host = ''
-  end
+  local use_gemini_agent = M.opts.gemini_agent_host ~= ''
+  local use_chatgpt_agent = M.opts.chatgpt_agent_host ~= ''
 
-
-  if M.opts.chatgpt_agent_host == nil then
-    M.opts.chatgpt_agent_host = ''
-  end
-
-  M.log("Gemini agent URL is " .. M.opts.gemini_agent_host " and ChatGPT agent URL is " .. M.opts.chatgpt_agent_host " and number of files is " .. number_of_files)
-  if ((M.opts.gemini_agent_host == '' or M.opts.chatgpt_agent_host == '') or number_of_files == 0) then
+  if (number_of_files == 0 or not use_gemini_agent or not use_chatgpt_agent ) then
     M.log("Not using agents")
     gemini.ask(instruction, prompt,{handleResult = function(gemini_output)  return handleResult(gemini_output,  'gemini_output')  end,callback = function() end},M.opts.gemini_api_key)
     chatgpt.ask(instruction,prompt,{handleResult = function(chatgpt_output) return handleResult(chatgpt_output, 'chatgpt_output') end,callback = function() end},M.opts.chatgpt_api_key)

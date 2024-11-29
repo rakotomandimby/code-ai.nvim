@@ -50,9 +50,6 @@ end
 
 function query.askHeavy(model, instruction, prompt, opts, agent_host)
   local url = agent_host .. '/chatgpt'
-  curl.get(url..'/clear', {callback = function() end})
-  -- sleep for 1 second to make sure the previous request is cleared
-  vim.cmd('sleep 1')
   local project_context = aiconfig.listScannedFilesFromConfig()
   local body_chunks = {}
   table.insert(body_chunks, {system_instruction = instruction})

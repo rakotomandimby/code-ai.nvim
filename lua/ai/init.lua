@@ -1,6 +1,7 @@
 local gemini = require('ai.gemini.query')
 local chatgpt = require('ai.chatgpt.query')
 local aiconfig = require('ai.aiconfig')
+local common = require('ai.common')
 
 local default_prompts = {
   introduce = {
@@ -27,17 +28,6 @@ M.opts = {
 }
 M.prompts = default_prompts
 local win_id
-
-function M.log(message)
-  local log_file = io.open("/tmp/aiconfig.log", "a")
-  if not log_file then
-    error("Could not open log file for writing.")
-  end
-  -- prepend timestamp to message
-  message = os.date("%Y-%m-%d %H:%M:%S") .. " " .. message
-  log_file:write(message .. "\n\n")
-  log_file:close()
-end
 
 local function splitLines(input)
   local lines = {}
@@ -170,14 +160,39 @@ function M.handle(name, input)
     update(M.fill(def.result_tpl or '${output}', args)) -- Update the popup directly
   end
 
+  local askHandleResultAndCallback = {
+    handleResult = handleResult,
+    callback = function() end
+  }
+
   if (number_of_files == 0 or not use_gemini_agent or not use_chatgpt_agent ) then
-    M.log("Not using agents")
-    gemini.ask(M.opts.gemini_model, instruction, prompt,{handleResult = function(gemini_output)  return handleResult(gemini_output,  'gemini_output')  end,callback = function() end},M.opts.gemini_api_key)
-    chatgpt.ask(M.opts.chatgpt_model, instruction,prompt,{handleResult = function(chatgpt_output) return handleResult(chatgpt_output, 'chatgpt_output') end,callback = function() end},M.opts.chatgpt_api_key)
+    common.log("Not using agents")
+    gemini.ask(
+      M.opts.gemini_model,
+      instruction,
+      prompt,
+      askHandleResultAndCallback,
+      M.opts.gemini_api_key)
+    chatgpt.ask(
+      M.opts.chatgpt_model,
+      instruction,
+      prompt,
+      askHandleResultAndCallback,
+      M.opts.chatgpt_api_key)
   else
-    M.log("Using agents")
-    gemini.askHeavy(M.opts.gemini_model, instruction,prompt, {handleResult = function(gemini_output)  return handleResult(gemini_output,  'gemini_output')  end,callback = function() end},M.opts.gemini_agent_host)
-    chatgpt.askHeavy(M.opts.chatgpt_model, instruction,prompt,{handleResult = function(chatgpt_output) return handleResult(chatgpt_output, 'chatgpt_output') end,callback = function() end},M.opts.chatgpt_agent_host)
+    common.log("Using agents")
+    gemini.askHeavy(
+      M.opts.gemini_model,
+      instruction,
+      prompt,
+      askHandleResultAndCallback,
+      M.opts.gemini_agent_host)
+    chatgpt.askHeavy(
+      M.opts.chatgpt_model,
+      instruction,
+      prompt,
+      askHandleResultAndCallback,
+      M.opts.chatgpt_agent_host)
   end
 end
 

@@ -3,16 +3,6 @@ local aiconfig = require('ai.aiconfig')
 local common = require('ai.common')
 local query = {}
 
-function query.log(message)
-  local log_file = io.open("/tmp/aiconfig.log", "a")
-  if not log_file then
-    error("Could not open log file for writing.")
-  end
-  log_file:write(message .. "\n\n")
-  log_file:close()
-end
-
-
 function query.formatResult(data)
   -- Extract token counts from the response
   local prompt_tokens = data.usage.prompt_tokens
@@ -28,22 +18,8 @@ function query.formatResult(data)
   return common.escapePercent(result)
 end
 
-function query.askCallback(res, opts)
-  local result
-  if res.status ~= 200 then
-    if opts.handleError ~= nil then
-      result = opts.handleError(res.status, res.body)
-    else
-      result = 'Error: ChatGPT API responded with the status ' .. tostring(res.status) .. '\n\n' .. res.body
-    end
-  else
-    local data = vim.fn.json_decode(res.body)
-    result = query.formatResult(data)
-    if opts.handleResult ~= nil then
-      result = opts.handleResult(result)
-    end
-  end
-  opts.callback(result)
+query.askCallback = function(res, opts)
+    common.askCallback(res, opts, query.formatResult)
 end
 
 function query.askHeavy(model, instruction, prompt, opts, agent_host)

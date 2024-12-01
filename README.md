@@ -42,10 +42,13 @@ This is the configuration for the plugin:
   'rakotomandimby/code-ai.nvim',
   dependencies = 'nvim-lua/plenary.nvim',
   opts = {
-    gemini_api_key = 'YOUR_GEMINI_API_KEY', -- or read from env: `os.getenv('GEMINI_API_KEY')`
-    chatgtp_api_key = 'YOUR_CHATGPT_API_KEY', -- or read from env: `os.getenv('CHATGPT_API_KEY')`
-    gemini_agent_host='http://172.16.76.1:5000', -- dont set if you dont want to use the agent
-    chatgpt_agent_host='http://172.16.76.1:4000', -- dont set if you dont want to use the agent
+    gemini_api_key = 'YOUR_GEMINI_API_KEY',         -- or read from env: `os.getenv('GEMINI_API_KEY')`
+    chatgtp_api_key = 'YOUR_CHATGPT_API_KEY',       -- or read from env: `os.getenv('CHATGPT_API_KEY')`
+
+    gemini_agent_host='http://172.16.76.1:5000',    -- dont set if you dont want to use the agent
+                                                    -- if you set, make sure the agents are running
+    chatgpt_agent_host='http://172.16.76.1:4000',   -- dont set if you dont want to use the agent
+                                                    -- if you set, make sure the agents are running
     result_popup_gets_focus = true,
     -- Define custom prompts here, see below for more details
     locale = 'en',

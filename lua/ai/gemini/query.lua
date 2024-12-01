@@ -1,5 +1,6 @@
 local curl = require('plenary.curl')
 local aiconfig = require('ai.aiconfig')
+local common = require('ai.common')
 local query = {}
 
 function query.log(message)
@@ -11,9 +12,6 @@ function query.log(message)
   log_file:close()
 end
 
-function query.escapePercent(s)
-  return string.gsub(s, "%%", "%%%%")
-end
 
 function query.formatResult(data)
   local result = ''
@@ -32,7 +30,7 @@ function query.formatResult(data)
       local formatted_answer_tokens = string.format("%gk", math.floor(answer_tokens / 1000))
 
       result = '\n# This is Gemini answer (' .. formatted_prompt_tokens .. ' in, ' .. formatted_answer_tokens .. ' out)\n\n' -- Add token counts to the output
-      result = result .. query.escapePercent(data['candidates'][1]['content']['parts'][1]['text']) .. '\n'
+      result = result .. common.escapePercent(data['candidates'][1]['content']['parts'][1]['text']) .. '\n'
     end
   else
     result = '# There are ' .. candidates_number .. ' Gemini candidates\n'

@@ -1,5 +1,6 @@
 local curl = require('plenary.curl')
 local aiconfig = require('ai.aiconfig')
+local common = require('ai.common')
 local query = {}
 
 function query.log(message)
@@ -11,9 +12,6 @@ function query.log(message)
   log_file:close()
 end
 
-function query.escapePercent(s)
-  return string.gsub(s, "%%", "%%%%")
-end
 
 function query.formatResult(data)
   -- Extract token counts from the response
@@ -27,7 +25,7 @@ function query.formatResult(data)
   -- Create the result string with token counts
   local result = '\n# This is ChatGPT answer (' .. formatted_prompt_tokens .. ' in, ' .. formatted_completion_tokens .. ' out)\n\n'
   result = result .. data.choices[1].message.content .. '\n\n'
-  return query.escapePercent(result)
+  return common.escapePercent(result)
 end
 
 function query.askCallback(res, opts)

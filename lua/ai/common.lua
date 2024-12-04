@@ -14,4 +14,21 @@ function common.log(message)
 end
 
 
+function common.askCallback(res, opts, formatResult)
+  local result
+  if res.status ~= 200 then
+    if opts.handleError ~= nil then
+      result = opts.handleError(res.status, res.body)
+    else
+      result = 'Error: API responded with the status ' .. tostring(res.status) .. '\n\n' .. res.body
+    end
+  else
+    local data = vim.fn.json_decode(res.body)
+    result = formatResult(data) -- Call the provided formatting function
+    if opts.handleResult ~= nil then
+      result = opts.handleResult(result)
+    end
+  end
+  opts.callback(result)
+end
 return common

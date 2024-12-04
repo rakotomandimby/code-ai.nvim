@@ -96,6 +96,7 @@ function query.ask(model, instruction, prompt, opts, api_key)
         }
       ),
       callback = function(res)
+        common.log(res.body)
         vim.schedule(function() query.askCallback(res, opts) end)
       end
     })

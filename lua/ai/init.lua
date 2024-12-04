@@ -160,8 +160,12 @@ function M.handle(name, input)
     update(M.fill(def.result_tpl or '${output}', args)) -- Update the popup directly
   end
 
-  local askHandleResultAndCallback = {
-    handleResult = handleResult,
+  local askHandleResultAndCallbackGemini = {
+    handleResult = function(output)  return handleResult(output,  'gemini_output') end,
+    callback = function() end
+  }
+  local askHandleResultAndCallbackChatGPT= {
+    handleResult = function(output)  return handleResult(output,  'chatgpt_output') end,
     callback = function() end
   }
 
@@ -171,13 +175,13 @@ function M.handle(name, input)
       M.opts.gemini_model,
       instruction,
       prompt,
-      askHandleResultAndCallback,
+      askHandleResultAndCallbackGemini,
       M.opts.gemini_api_key)
     chatgpt.ask(
       M.opts.chatgpt_model,
       instruction,
       prompt,
-      askHandleResultAndCallback,
+      askHandleResultAndCallbackChatGPT,
       M.opts.chatgpt_api_key)
   else
     common.log("Using agents")
@@ -185,13 +189,13 @@ function M.handle(name, input)
       M.opts.gemini_model,
       instruction,
       prompt,
-      askHandleResultAndCallback,
+      askHandleResultAndCallbackGemini,
       M.opts.gemini_agent_host)
     chatgpt.askHeavy(
       M.opts.chatgpt_model,
       instruction,
       prompt,
-      askHandleResultAndCallback,
+      askHandleResultAndCallbackChatGPT,
       M.opts.chatgpt_agent_host)
   end
 end

@@ -18,8 +18,22 @@ function query.formatResult(data)
   return common.escapePercent(result)
 end
 
-query.askCallback = function(res, opts)
-    common.askCallback(res, opts, query.formatResult)
+function query.askCallback(res, opts)
+  local result
+  if res.status ~= 200 then
+    if opts.handleError ~= nil then
+      result = opts.handleError(res.status, res.body)
+    else
+      result = 'Error: API responded with the status ' .. tostring(res.status) .. '\n\n' .. res.body
+    end
+  else
+    local data = vim.fn.json_decode(res.body)
+    result = query.formatResult(data) -- Call the provided formatting function
+    if opts.handleResult ~= nil then
+      result = opts.handleResult(result)
+    end
+  end
+  opts.callback(result)
 end
 
 function query.askHeavy(model, instruction, prompt, opts, agent_host)

@@ -73,12 +73,14 @@ function query.ask(model, instruction, prompt, opts, api_key)
           model = model,
           messages = (function()
             local messages = {}
-            table.insert(messages, { role = 'system', content = instruction })
-            table.insert(messages, {role = 'user', content = prompt})
+            if string.sub(model, 1, 2) == 'o1' then
+              table.insert(messages, {role = 'user', content = instruction .. '\n' .. prompt})
+            else
+              table.insert(messages, { role = 'system', content = instruction })
+              table.insert(messages, {role = 'user', content = prompt})
+            end
             return messages
-          end)(),
-          temperature = 0.2,
-          top_p = 0.1
+          end)()
         }
       ),
       callback = function(res)

@@ -4,11 +4,10 @@ local common = require('ai.common')
 local query = {}
 
 function query.formatResult(data)
-  -- Extract token counts from the response
+  common.log("Inside ChatGPT formatResult")
   local prompt_tokens = data.usage.prompt_tokens
   local completion_tokens = data.usage.completion_tokens
 
-  -- Format token counts (e.g., "30k", "2k")
   local formatted_prompt_tokens = string.format("%gk", math.floor(prompt_tokens / 1000))
   local formatted_completion_tokens = string.format("%gk", math.floor(completion_tokens / 1000))
 
@@ -19,8 +18,6 @@ function query.formatResult(data)
 end
 
 query.askCallback = function(res, opts)
-  local res = table.concat(res)
-  common.log("ChatGPT callback got" .. res)
   common.askCallback(res, opts, query.formatResult)
 end
 

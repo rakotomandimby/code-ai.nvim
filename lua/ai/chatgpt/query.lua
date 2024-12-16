@@ -19,6 +19,7 @@ function query.formatResult(data)
 end
 
 query.askCallback = function(res, opts)
+  common.log("ChatGPT callback got" .. res)
   common.askCallback(res, opts, query.formatResult)
 end
 

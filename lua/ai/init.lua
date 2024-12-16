@@ -208,15 +208,6 @@ function M.assign(table, other)
 end
 
 function M.setup(opts)
-  -- if there is no gemini_model nor chatgpt_model, then exit with an error
-  if M.opts.gemini_model == '' and M.opts.chatgpt_model == '' then
-    error('You need to set either gemini_model or chatgpt_model')
-  end
-  -- same for the keys
-  if M.opts.gemini_api_key == '' and M.opts.chatgpt_api_key == '' then
-    error('You need to set either gemini_api_key or chatgpt_api_key')
-  end
-  -- 
   for k, v in pairs(opts) do
     if k == 'prompts' then
       M.prompts = {}
@@ -238,6 +229,13 @@ function M.setup(opts)
         end
       end, { range = true, nargs = '?' })
     end
+  end
+
+  if M.opts.gemini_model == '' or M.opts.chatgpt_model == '' then
+    error('You need to set both gemini_model and chatgpt_model')
+  end
+  if M.opts.gemini_api_key == '' or M.opts.chatgpt_api_key == '' then
+    error('You need to set both gemini_api_key and chatgpt_api_key')
   end
 
   vim.api.nvim_create_user_command('AIListScannedFiles', function()

@@ -42,8 +42,11 @@ This is the configuration for the plugin:
   'rakotomandimby/code-ai.nvim',
   dependencies = 'nvim-lua/plenary.nvim',
   opts = {
+    gemini_model='gemini-2.0-flash-exp',
+    chatgpt_model='gpt-4o-mini',
+
     gemini_api_key = 'YOUR_GEMINI_API_KEY',         -- or read from env: `os.getenv('GEMINI_API_KEY')`
-    chatgtp_api_key = 'YOUR_CHATGPT_API_KEY',       -- or read from env: `os.getenv('CHATGPT_API_KEY')`
+    chatgpt_api_key = 'YOUR_CHATGPT_API_KEY',       -- or read from env: `os.getenv('CHATGPT_API_KEY')`
 
     gemini_agent_host='http://172.16.76.1:5000',    -- dont set if you dont want to use the agent
                                                     -- if you set, make sure the agents are running
@@ -88,6 +91,12 @@ The prompts will be merged into built-in prompts. Here are the available fields 
 
 | Fields            | Required | Description                                                                                      |
 | ---------------   | -------- | ------------------------------------------------------------------------------------------------ |
+| `gemini_model`    | Yes      | The model to use for the Gemini API.                                                             |
+| `chatgpt_model`   | Yes      | The model to use for the ChatGPT API.                                                            |
+| `gemini_api_key`  | Yes      | The API key for the Gemini API.                                                                  |
+| `chatgpt_api_key` | Yes      | The API key for the ChatGPT API.                                                                 |
+| `gemini_agent_host`  | No     | The host of the Gemini agent.                                                                   |
+| `chatgpt_agent_host` | No     | The host of the ChatGPT agent.                                                                  |
 | `command`         | No       | A user command will be created for this prompt.                                                  |
 | `instruction_tpl` | Yes      | Template for the instruction given to the model                                                  |                         
 | `loading_tpl`     | No       | Template for content shown when communicating with Gemini. See below for available placeholders. |

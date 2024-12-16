@@ -9,8 +9,7 @@ Thank you Gerald for your work.
 A Neovim plugin powered by Google Gemini and ChatGPT.
 Here is a demo:
 
-![demo](./demo-code-ai.gif)
-
+![Demonstration of prompt with comment](https://youtu.be/fkVt4ozc-w8)
 
 # How it works
 

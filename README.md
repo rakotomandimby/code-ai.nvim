@@ -7,9 +7,10 @@ Thank you Gerald for your work.
 # code-ai.nvim
 
 A Neovim plugin powered by Google Gemini and ChatGPT.
+
 Here is a demo:
 
-![Demonstration of prompt with comment](https://youtu.be/fkVt4ozc-w8)
+[![Demonstration](https://img.youtube.com/vi/fkVt4ozc-w8/0.jpg)](https://www.youtube.com/watch?v=fkVt4ozc-w8)
 
 # How it works
 

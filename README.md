@@ -8,9 +8,13 @@ Thank you Gerald for your work.
 
 A Neovim plugin powered by Google Gemini and ChatGPT.
 
-Here is a demo:
+Here is a demo without using the agents:
 
 [![Demonstration](https://img.youtube.com/vi/fkVt4ozc-w8/0.jpg)](https://www.youtube.com/watch?v=fkVt4ozc-w8)
+
+Here is a demo using the agents:
+
+[![Demonstration](https://img.youtube.com/vi/Mmv7dKrak7Q/0.jpg)](https://www.youtube.com/watch?v=Mmv7dKrak7Q)
 
 # How it works
 

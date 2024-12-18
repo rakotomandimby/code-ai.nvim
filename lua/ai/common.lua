@@ -9,6 +9,9 @@ function common.log(message)
   if not log_file then
     error("Could not open log file for writing.")
   end
+  -- build a timestamp string surrounded by [] that will prepend the log message
+  local timestamp = os.date("%Y-%m-%d %H:%M:%S")
+  message = "[ " .. timestamp .. " ] -- " .. message
   log_file:write(message .. "\n")
   log_file:close()
 end
@@ -20,6 +23,7 @@ function common.askCallback(res, opts, formatResult)
     if opts.handleError ~= nil then
       result = opts.handleError(res.status, res.body)
     else
+      log("Error: API responded with the status " .. tostring(res.status) .. '\n\n' .. res.body)
       result = 'Error: API responded with the status ' .. tostring(res.status) .. '\n\n' .. res.body
     end
   else

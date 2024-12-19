@@ -6,8 +6,10 @@ local common = require('ai.common')
 function history.createHistoryDir()
   local historyDir = aiconfig.getProjectRoot() .. '/.ai-history'
   common.log("Checking if history directory exists: " .. historyDir)
-  local historyDirExists = vim.fn.isdirectory(historyDir)
+  -- check if the directory exists
+  local historyDirExists = vim.fn.isdirectory(historyDir) == 1
   if not historyDirExists then
+    common.log("History directory does not exist, creating it")
     vim.fn.mkdir(historyDir, 'p')
     common.log("Created history directory: " .. historyDir)
   end

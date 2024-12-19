@@ -13,7 +13,7 @@ end
 
 function history.saveToHistory(model, content)
     -- handle errors and log them
-    if not pcall(history.createHistoryDir()) then
+    if not pcall(history.createHistoryDir) then
         common.log("Error: Failed to create history directory")
         return
     end

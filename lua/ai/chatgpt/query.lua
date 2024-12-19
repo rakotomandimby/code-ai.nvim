@@ -2,6 +2,9 @@ local curl = require('plenary.curl')
 local aiconfig = require('ai.aiconfig')
 local common = require('ai.common')
 local query = {}
+local history = require('ai.history')
+
+local promptToSave = ""
 
 function query.formatResult(data)
   common.log("Inside ChatGPT formatResult")
@@ -14,6 +17,7 @@ function query.formatResult(data)
   -- Create the result string with token counts
   local result = '\n# This is ChatGPT answer (' .. formatted_prompt_tokens .. ' in, ' .. formatted_completion_tokens .. ' out)\n\n'
   result = result .. data.choices[1].message.content .. '\n\n'
+  history.saveToHistory('chatgpt', promptToSave .. '\n\n' .. common.escapePercent(result))
   return common.escapePercent(result)
 end
 
@@ -22,6 +26,7 @@ query.askCallback = function(res, opts)
 end
 
 function query.askHeavy(model, instruction, prompt, opts, agent_host)
+  promptToSave = prompt
   local url = agent_host .. '/chatgpt'
   local project_context = aiconfig.listScannedFilesFromConfig()
   local body_chunks = {}
@@ -58,6 +63,7 @@ end
 
 
 function query.ask(model, instruction, prompt, opts, api_key)
+  promptToSave = prompt
   local api_host = 'https://api.openai.com'
   -- local api_host = 'https://eowloffrpvxwtqp.m.pipedream.net'
   local path = '/v1/chat/completions'

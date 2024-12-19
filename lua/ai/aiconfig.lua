@@ -12,9 +12,43 @@ function aiconfig.findScannedFilesConfig()
 end
 
 function aiconfig.getProjectRoot()
-  local project_root = vim.fn.getcwd()
+  -- To find the project root, we look upward for several files or directory, in this order:
+  -- 1. The .ai-scanned-files file
+  -- 2. The .git directory
+  -- 3. The .gitignore file
+  -- 4. The README.md file
+
+  local project_root = vim.fn.getcwd() -- Start with the current working directory
+  -- Check if the .ai-scanned-files file exists here or in any parent directory
+  local configFile = aiconfig.findScannedFilesConfig()
+  if configFile ~= "" then
+    project_root = vim.fn.fnamemodify(configFile, ":h") -- Get the parent directory of the .ai-scanned-files file
+    return project_root
+  end
+
+  -- Check if the .git directory exists here or in any parent directory
+  local gitDir = vim.fn.finddir(".git", ".;") -- Find the .git directory
+  if gitDir ~= "" then
+    project_root = vim.fn.fnamemodify(gitDir, ":h") -- Get the parent directory of the .git directory
+    return project_root
+  end
+
+  -- Check if the .gitignore file exists here or in any parent directory
+  local gitignoreFile = vim.fn.findfile(".gitignore", ".;") -- Find the .gitignore file
+  if gitignoreFile ~= "" then
+    project_root = vim.fn.fnamemodify(gitignoreFile, ":h") -- Get the parent directory of the .gitignore file
+    return project_root
+  end
+
+  -- Check if the README.md file exists here or in any parent directory
+  local readmeFile = vim.fn.findfile("README.md", ".;") -- Find the README.md file
+  if readmeFile ~= "" then
+    project_root = vim.fn.fnamemodify(readmeFile, ":h") -- Get the parent directory of the README.md file
+    return project_root
+  end
   return project_root
 end
+
 
 function aiconfig.listScannedFilesFromConfig()
   local config = aiconfig.findScannedFilesConfig()

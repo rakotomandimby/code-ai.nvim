@@ -23,7 +23,7 @@ function common.askCallback(res, opts, formatResult)
     if opts.handleError ~= nil then
       result = opts.handleError(res.status, res.body)
     else
-      log("Error: API responded with the status " .. tostring(res.status) .. '\n\n' .. res.body)
+      common.log("Error: API responded with the status " .. tostring(res.status) .. '\n\n' .. res.body)
       result = 'Error: API responded with the status ' .. tostring(res.status) .. '\n\n' .. res.body
     end
   else

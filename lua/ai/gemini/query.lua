@@ -2,6 +2,9 @@ local curl = require('plenary.curl')
 local aiconfig = require('ai.aiconfig')
 local common = require('ai.common')
 local query = {}
+local history = require('ai.history')
+
+local promptToSave = ""
 
 function query.formatResult(data)
   common.log("Inside Gemini formatResult")
@@ -30,7 +33,8 @@ function query.formatResult(data)
       result = result .. data['candidates'][i]['content']['parts'][1]['text'] .. '\n'
     end
   end
-  return result
+  history.saveToHistory('gemini', promptToSave .. '\n\n' .. common.escapePercent(result))
+  return common.escapePercent(result)
 end
 
 query.askCallback = function(res, opts)
@@ -38,6 +42,7 @@ query.askCallback = function(res, opts)
 end
 
 function query.askHeavy(model, instruction, prompt, opts, agent_host)
+  promptToSave = prompt
   local url = agent_host .. '/gemini'
   local project_context = aiconfig.listScannedFilesFromConfig()
   local body_chunks = {}
@@ -73,6 +78,7 @@ function query.askHeavy(model, instruction, prompt, opts, agent_host)
 end
 
 function query.ask(model, instruction, prompt, opts, api_key)
+  promptToSave = prompt
   local api_host = 'https://generativelanguage.googleapis.com'
   -- local api_host = 'https://eowloffrpvxwtqp.m.pipedream.net'
   local path = '/v1beta/models/' .. model .. ':generateContent'

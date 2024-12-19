@@ -6,10 +6,8 @@ local common = require('ai.common')
 function history.createHistoryDir()
   local historyDir = aiconfig.getProjectRoot() .. '/.ai-history'
   common.log("Checking if history directory exists: " .. historyDir)
-  -- check if the directory exists
   local historyDirExists = vim.fn.isdirectory(historyDir) == 1
   if not historyDirExists then
-    common.log("History directory does not exist, creating it")
     vim.fn.mkdir(historyDir, 'p')
     common.log("Created history directory: " .. historyDir)
   end
@@ -19,10 +17,7 @@ function history.saveToHistory(model, content)
   common.log("Saving history to " .. model .. " history file")
   history.createHistoryDir()
   common.log("Creating history file for " .. model)
-  -- Generate a unique filename based on the model and timestamp go to milliseconds
-  -- to avoid collisions
-  -- Example: chatgpt_2023-03-15_10-30-00-0000.md
-  local fileName = model .. "_" .. os.date("%Y-%m-%d_%H-%M-%S") .. "-" .. string.format("%04d", os.time()) .. ".md"
+  local fileName = os.date("%Y-%m-%d_%Hh-%Mm-%Ss") .. "_" .. model .. "_" .. string.format("%04d", os.time()) .. ".md"
   local filePath = aiconfig.getProjectRoot() .. '/.ai-history/' .. fileName
   local file = io.open(filePath, "w")
   common.log("Writing to history file: " .. filePath)

@@ -100,32 +100,27 @@ end
 
 function aiconfig.listScannedFilesAsText()
   local analyzed_files_as_array = aiconfig.listScannedFilesFromConfig()
-  if #analyzed_files_as_array == 0 then
+  local num_files = #analyzed_files_as_array
+
+  if num_files == 0 then
     return ""
   end
 
-  local analyzed_files_as_string = ""
-  if 1 == #aiconfig.listScannedFilesFromConfig() then
-    analyzed_files_as_string = "The project is composed of one file: `" .. analyzed_files_as_array[1] .. "`."
-    return analyzed_files_as_string
+  local file_names = {}
+  for _, file in ipairs(analyzed_files_as_array) do
+    table.insert(file_names, string.format("`%%s`", file))
   end
-  if 2 == #aiconfig.listScannedFilesFromConfig() then
-    analyzed_files_as_string = "The project is composed of two files: `" .. analyzed_files_as_array[1] .. "` and `" .. analyzed_files_as_array[2] .. "` ."
-    return analyzed_files_as_string
+
+  local analyzed_files_as_string = "The project is composed of " .. num_files .. " file" .. (num_files > 1 and "s" or "") .. ": "
+
+  if num_files == 1 then
+    analyzed_files_as_string = analyzed_files_as_string .. file_names[1] .. "."
+  elseif num_files == 2 then
+    analyzed_files_as_string = analyzed_files_as_string .. table.concat(file_names, " and ") .. "."
+  else
+    analyzed_files_as_string = analyzed_files_as_string .. table.concat(file_names, ", ", 1, num_files - 1) .. ", and " .. file_names[num_files] .. "."
   end
-  if 3 <= #aiconfig.listScannedFilesFromConfig() then
-    analyzed_files_as_string = "The project is composed of " .. #aiconfig.listScannedFilesFromConfig() .. " files: "
-  end
-  for i, _ in ipairs(analyzed_files_as_array) do
-    if i == (#analyzed_files_as_array) then
-      return analyzed_files_as_string
-    end
-    if i == (#analyzed_files_as_array - 1) then
-      analyzed_files_as_string = analyzed_files_as_string .. " `" ..analyzed_files_as_array[#analyzed_files_as_array-1] .. "` and `" .. analyzed_files_as_array[#analyzed_files_as_array] .. "`."
-    else
-      analyzed_files_as_string = analyzed_files_as_string .. " `"..analyzed_files_as_array[i] .. "` ,"
-    end
-  end
+
   return analyzed_files_as_string
 end
 

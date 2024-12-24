@@ -5,6 +5,7 @@ local query = {}
 local history = require('ai.history')
 
 local promptToSave = ""
+local modelUsed = ""
 
 function query.formatResult(data)
   common.log("Inside Gemini formatResult")
@@ -23,7 +24,7 @@ function query.formatResult(data)
       local formatted_prompt_tokens = string.format("%gk", math.floor(prompt_tokens / 1000))
       local formatted_answer_tokens = string.format("%gk", math.floor(answer_tokens / 1000))
 
-      result = '\n# This is Gemini answer (' .. formatted_prompt_tokens .. ' in, ' .. formatted_answer_tokens .. ' out)\n\n' -- Add token counts to the output
+      result = '\n# This is Gemini ' .. modelUsed .. ' answer (' .. formatted_prompt_tokens .. ' in, ' .. formatted_answer_tokens .. ' out)\n\n'
       result = result .. common.escapePercent(data['candidates'][1]['content']['parts'][1]['text']) .. '\n'
     end
   else
@@ -43,6 +44,7 @@ end
 
 function query.askHeavy(model, instruction, prompt, opts, agent_host)
   promptToSave = prompt
+  modelUsed = model
   local url = agent_host .. '/gemini'
   local project_context = aiconfig.listScannedFilesFromConfig()
   local body_chunks = {}
@@ -79,6 +81,7 @@ end
 
 function query.ask(model, instruction, prompt, opts, api_key)
   promptToSave = prompt
+  modelUsed = model
   local api_host = 'https://generativelanguage.googleapis.com'
   -- local api_host = 'https://eowloffrpvxwtqp.m.pipedream.net'
   local path = '/v1beta/models/' .. model .. ':generateContent'

@@ -16,7 +16,7 @@ function query.formatResult(data)
   local formatted_completion_tokens = string.format("%gk", math.floor(completion_tokens / 1000))
 
   -- Create the result string with token counts
-  local result = '\n# This is ChatGPT '.. modelUsed .. ' answer (' .. formatted_prompt_tokens .. ' in, ' .. formatted_completion_tokens .. ' out)\n\n'
+  local result = '\n# This is '.. modelUsed .. ' answer (' .. formatted_prompt_tokens .. ' in, ' .. formatted_completion_tokens .. ' out)\n\n'
   result = result .. data.choices[1].message.content .. '\n\n'
   history.saveToHistory('chatgpt', promptToSave .. '\n\n' .. common.escapePercent(result))
   return common.escapePercent(result)

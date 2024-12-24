@@ -24,6 +24,7 @@ function history.saveToHistory(model, content)
   if file then
     file:write(content)
     file:close()
+    history.removeOldestHistoryFiles()
     return filePath
   else
     return nil
@@ -35,23 +36,31 @@ function history.listHistoryFiles()
   local historyDir = aiconfig.getProjectRoot() .. '/.ai-history'
   local files = vim.fn.readdir(historyDir)
   table.sort(files)
+  for i, file in ipairs(files) do
+    common.log("File " .. i .. ": " .. file)
+  end
   return files
 end
 
--- list files in the '.ai-history' directory (use existing function)
--- if there are more than 10 files, delete the oldest from the filesystem and keep only the 10 newest
---
 function history.removeOldestHistoryFiles()
   local historyDir = aiconfig.getProjectRoot() .. '/.ai-history'
-  local files = vim.fn.readdir(historyDir)
-  table.sort(files)
+  local files = history.listHistoryFiles()
+  common.log("Files in history folder:")
+  for i, file in ipairs(files) do
+    common.log("File " .. i .. ": " .. file)
+  end
   if #files > 10 then
-    local oldestFile = files[1]
-    local oldestFilePath = historyDir .. '/' .. oldestFile
-    vim.fn.delete(oldestFilePath)
-    common.log("Deleted oldest history file: " .. oldestFilePath)
+    common.log(string.format("There are %d files in the history folder", #files))
+    common.logi(string.format("WE need to remove %d files", #files - 10))
+    for i = #files - 10, 1, -1 do
+      local file = files[i]
+      local filePath = historyDir .. '/' .. file
+      vim.fn.delete(filePath)
+      common.log("Deleted oldest history file: " .. filePath)
+    end
+  else
+    common.log("There are less than 10 files in the history folder")
   end
 end
-
 
 return history

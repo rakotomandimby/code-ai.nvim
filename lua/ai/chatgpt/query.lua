@@ -52,11 +52,11 @@ function query.askHeavy(model, instruction, prompt, opts, agent_host)
 
   local function sendNextRequest(i)
     if i > #body_chunks then
-      return -- All requests sent
+      return
     end
 
     local message = body_chunks[i]
-    local body = vim.fn.json_encode(message)
+    local body = vim.json.encode(message)
 
     curl.post(url,
       {
@@ -66,13 +66,13 @@ function query.askHeavy(model, instruction, prompt, opts, agent_host)
           if i == #body_chunks then
             vim.schedule(function() query.askCallback(res, opts) end)
           else
-            sendNextRequest(i + 1) -- Send the next request after the current one completes
+            sendNextRequest(i + 1)
           end
         end
       })
   end
 
-  sendNextRequest(1) -- Start the chain of requests
+  sendNextRequest(1)
 
 end
 

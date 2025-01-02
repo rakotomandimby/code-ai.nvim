@@ -49,7 +49,6 @@ function query.askHeavy(model, instruction, prompt, opts, agent_host)
   table.insert(body_chunks, {top_p = 0.1})
   table.insert(body_chunks, {})
 
-
   local function sendNextRequest(i)
     if i > #body_chunks then
       return

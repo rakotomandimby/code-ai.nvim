@@ -65,14 +65,8 @@ function query.askHeavy(model, instruction, prompt, opts, agent_host)
   table.insert(body_chunks, {top_p = 0.5})
   table.insert(body_chunks, {})
 
-  local function sendNextRequest(i)
-    if i > #body_chunks then
-      return
-    end
-
-    local message = body_chunks[i]
+  for i, message in ipairs(body_chunks) do
     local body = vim.fn.json_encode(message)
-
     curl.post(url,
       {
         headers = {['Content-type'] = 'application/json'},
@@ -80,14 +74,10 @@ function query.askHeavy(model, instruction, prompt, opts, agent_host)
         callback = function(res)
           if i == #body_chunks then
             vim.schedule(function() query.askCallback(res, opts) end)
-          else
-            sendNextRequest(i + 1)
           end
         end
       })
   end
-
-  sendNextRequest(1) -- Start the chain of requests
 end
 
 function query.ask(model, instruction, prompt, opts, api_key)

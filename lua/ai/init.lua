@@ -154,31 +154,36 @@ function M.handle(name, input)
   local prompt = M.fill(def.prompt_tpl, args)
   local instruction = M.fill(def.instruction_tpl, args)
 
+
+  local gemini_model = def.gemini_model or M.opts.gemini_model
+  local chatgpt_model = def.chatgpt_model or M.opts.chatgpt_model
+
   local function handleResult(output, output_key)
     args[output_key] = output
     args.output = (args.gemini_output or '') .. (args.chatgpt_output or '')
-    update(M.fill(def.result_tpl or '${output}', args)) -- Update the popup directly
+    update(M.fill(def.result_tpl or '${output}', args))
   end
 
   local askHandleResultAndCallbackGemini = {
-    handleResult = function(output)  return handleResult(output,  'gemini_output') end,
+    handleResult = function(output) return handleResult(output, 'gemini_output') end,
     callback = function() end
   }
-  local askHandleResultAndCallbackChatGPT= {
-    handleResult = function(output)  return handleResult(output,  'chatgpt_output') end,
+  local askHandleResultAndCallbackChatGPT = {
+    handleResult = function(output) return handleResult(output, 'chatgpt_output') end,
     callback = function() end
   }
 
-  if (number_of_files == 0 or not use_gemini_agent or not use_chatgpt_agent ) then
+
+  if (number_of_files == 0 or not use_gemini_agent or not use_chatgpt_agent) then
     common.log("Not using agents")
     gemini.ask(
-      M.opts.gemini_model,
+      gemini_model,
       instruction,
       prompt,
       askHandleResultAndCallbackGemini,
       M.opts.gemini_api_key)
     chatgpt.ask(
-      M.opts.chatgpt_model,
+      chatgpt_model,
       instruction,
       prompt,
       askHandleResultAndCallbackChatGPT,
@@ -186,13 +191,13 @@ function M.handle(name, input)
   else
     common.log("Using agents")
     gemini.askHeavy(
-      M.opts.gemini_model,
+      gemini_model,
       instruction,
       prompt,
       askHandleResultAndCallbackGemini,
       M.opts.gemini_agent_host)
     chatgpt.askHeavy(
-      M.opts.chatgpt_model,
+      chatgpt_model,
       instruction,
       prompt,
       askHandleResultAndCallbackChatGPT,

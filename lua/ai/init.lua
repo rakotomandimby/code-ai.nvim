@@ -128,6 +128,7 @@ function M.fill(tpl, args)
   return tpl
 end
 
+
 function M.handle(name, input)
   local def = M.prompts[name]
   local width = vim.fn.winwidth(0)
@@ -154,9 +155,17 @@ function M.handle(name, input)
   local prompt = M.fill(def.prompt_tpl, args)
   local instruction = M.fill(def.instruction_tpl, args)
 
-
+  -- Determine which models to use
   local gemini_model = def.gemini_model or M.opts.gemini_model
   local chatgpt_model = def.chatgpt_model or M.opts.chatgpt_model
+
+  -- If command-level models are set, use them
+  if def.gemini_model and def.gemini_model ~= '' then
+    gemini_model = def.gemini_model
+  end
+  if def.chatgpt_model and def.chatgpt_model ~= '' then
+    chatgpt_model = def.chatgpt_model
+  end
 
   local function handleResult(output, output_key)
     args[output_key] = output
@@ -172,7 +181,6 @@ function M.handle(name, input)
     handleResult = function(output) return handleResult(output, 'chatgpt_output') end,
     callback = function() end
   }
-
 
   if (number_of_files == 0 or not use_gemini_agent or not use_chatgpt_agent) then
     common.log("Not using agents")

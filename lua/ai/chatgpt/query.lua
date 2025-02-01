@@ -18,8 +18,8 @@ function query.formatResult(data)
   -- Create the result string with token counts
   local result = '\n# This is '.. modelUsed .. ' answer (' .. formatted_prompt_tokens .. ' in, ' .. formatted_completion_tokens .. ' out)\n\n'
   result = result .. data.choices[1].message.content .. '\n\n'
-  history.saveToHistory('chatgpt', promptToSave .. '\n\n' .. common.escapePercent(result))
-  return common.escapePercent(result)
+  history.saveToHistory('chatgpt', promptToSave .. '\n\n' .. result)
+  return result
 end
 
 query.askCallback = function(res, opts)

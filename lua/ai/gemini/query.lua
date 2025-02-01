@@ -25,7 +25,7 @@ function query.formatResult(data)
       local formatted_answer_tokens = string.format("%gk", math.floor(answer_tokens / 1000))
 
       result = '\n# This is ' .. modelUsed .. ' answer (' .. formatted_prompt_tokens .. ' in, ' .. formatted_answer_tokens .. ' out)\n\n'
-      result = result .. common.escapePercent(data['candidates'][1]['content']['parts'][1]['text']) .. '\n'
+      result = result .. data['candidates'][1]['content']['parts'][1]['text'] .. '\n'
     end
   else
     result = '# There are ' .. candidates_number .. ' Gemini candidates\n'
@@ -34,8 +34,8 @@ function query.formatResult(data)
       result = result .. data['candidates'][i]['content']['parts'][1]['text'] .. '\n'
     end
   end
-  history.saveToHistory('gemini', promptToSave .. '\n\n' .. common.escapePercent(result))
-  return common.escapePercent(result)
+  history.saveToHistory('gemini', promptToSave .. '\n\n' .. result)
+  return result
 end
 
 query.askCallback = function(res, opts)

@@ -17,7 +17,7 @@ function history.saveToHistory(model, content)
   common.log("Saving history to " .. model .. " history file")
   history.createHistoryDir()
   common.log("Creating history file for " .. model)
-  local fileName = os.date("%Y%m%d%Hh%Mm%Ss") .. "_" .. model .. "_" .. string.format("%04d", os.time()) .. ".md"
+  local fileName = os.date("%Y%m%d%Hh%Mm%Ss") .. "_" .. model .. ".md"
   -- remove the 2 first characters of the filename, because it is century and we dont need it
   fileName = string.sub(fileName, 3)
   local filePath = aiconfig.getProjectRoot() .. '/.ai-history/' .. fileName

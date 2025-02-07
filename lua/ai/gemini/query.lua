@@ -34,7 +34,7 @@ function query.formatResult(data)
       result = result .. data['candidates'][i]['content']['parts'][1]['text'] .. '\n'
     end
   end
-  history.saveToHistory('gemini', promptToSave .. '\n\n' .. result)
+  history.saveToHistory('gemini' .. modelUsed .. '_' , promptToSave .. '\n\n' .. result)
   return result
 end
 

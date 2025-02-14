@@ -18,7 +18,7 @@ function query.formatResult(data)
   -- Create the result string with token counts
   local result = '\n# This is '.. modelUsed .. ' answer (' .. formatted_prompt_tokens .. ' in, ' .. formatted_completion_tokens .. ' out)\n\n'
   result = result .. data.choices[1].message.content .. '\n\n'
-  history.saveToHistory('chatgpt_' .. modelUsed .. '_', promptToSave .. '\n\n' .. result)
+  history.saveToHistory('chatgpt_' .. modelUsed , promptToSave .. '\n\n' .. result)
   return result
 end
 

@@ -9,15 +9,15 @@ local modelUsed = ""
 
 function query.formatResult(data)
   common.log("Inside Anthropic formatResult")
-  local prompt_tokens = data.usage.prompt_tokens
-  local completion_tokens = data.usage.completion_tokens
+  local input_tokens = data.usage.input_tokens
+  local output_tokens = data.usage.output_tokens
 
-  local formatted_prompt_tokens = string.format("%gk", math.floor(prompt_tokens / 1000))
-  local formatted_completion_tokens = string.format("%gk", math.floor(completion_tokens / 1000))
+  local formatted_input_tokens = string.format("%gk", math.floor(input_tokens / 1000))
+  local formatted_output_tokens = string.format("%gk", math.floor(output_tokens / 1000))
 
   -- Create the result string with token counts
-  local result = '\n# This is '.. modelUsed .. ' answer (' .. formatted_prompt_tokens .. ' in, ' .. formatted_completion_tokens .. ' out)\n\n'
-  result = result .. data.choices[1].message.content .. '\n\n'
+  local result = '\n# This is '.. modelUsed .. ' answer (' .. formatted_input_tokens .. ' in, ' .. formatted_output_tokens .. ' out)\n\n'
+  result = result .. data.content[1].text.content .. '\n\n'
   history.saveToHistory('claude_' .. modelUsed , promptToSave .. '\n\n' .. result)
   return result
 end

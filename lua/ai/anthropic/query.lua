@@ -29,7 +29,7 @@ end
 function query.askHeavy(model, instruction, prompt, opts, agent_host)
   promptToSave = prompt
   modelUsed = model
-  local url = agent_host .. '/anthroppic]'
+  local url = agent_host .. '/anthropic'
   local project_context = aiconfig.listScannedFilesFromConfig()
   local body_chunks = {}
   table.insert(body_chunks, {system_instruction = instruction})

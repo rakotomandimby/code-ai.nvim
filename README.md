@@ -46,12 +46,16 @@ This is the configuration for the plugin:
   'rakotomandimby/code-ai.nvim',
   dependencies = 'nvim-lua/plenary.nvim',
   opts = {
+    anthropic_model='claude-3-7-sonnet-latest',
     gemini_model='gemini-2.0-flash-exp',
     chatgpt_model='gpt-4o-mini',
 
+    anthropic_api_key = 'YOUR_ANTHROPIC_API_KEY',   -- or read from env: `os.getenv('ANTHROPIC_API_KEY')`
     gemini_api_key = 'YOUR_GEMINI_API_KEY',         -- or read from env: `os.getenv('GEMINI_API_KEY')`
     chatgpt_api_key = 'YOUR_CHATGPT_API_KEY',       -- or read from env: `os.getenv('CHATGPT_API_KEY')`
 
+    anthropic_agent_host='http://172.16.76.1:6000', -- dont set if you dont want to use the agent
+                                                    -- if you set, make sure the agents are running
     gemini_agent_host='http://172.16.76.1:5000',    -- dont set if you dont want to use the agent
                                                     -- if you set, make sure the agents are running
     chatgpt_agent_host='http://172.16.76.1:4000',   -- dont set if you dont want to use the agent

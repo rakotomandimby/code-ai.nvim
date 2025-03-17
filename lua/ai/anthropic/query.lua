@@ -17,7 +17,7 @@ function query.formatResult(data)
 
   -- Create the result string with token counts
   local result = '\n# This is '.. modelUsed .. ' answer (' .. formatted_input_tokens .. ' in, ' .. formatted_output_tokens .. ' out)\n\n'
-  result = result .. data.content[1].text.content .. '\n\n'
+  result = result .. data.content[1].text .. '\n\n'
   history.saveToHistory('claude_' .. modelUsed , promptToSave .. '\n\n' .. result)
   return result
 end

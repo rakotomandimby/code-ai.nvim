@@ -26,7 +26,7 @@ function history.saveToHistory(model, content)
   if file then
     file:write(content)
     file:close()
-    history.removeOldestHistoryFiles()
+    history.removeOldestHistoryFiles(15)
     return filePath
   else
     return nil
@@ -46,24 +46,24 @@ end
 
 -- Do you this this function will do the expected thing of removing the oldest files?
 -- Also check `history.listHistoryFiles()` to see if the order is correct
-function history.removeOldestHistoryFiles()
+function history.removeOldestHistoryFiles(numberOfFilesToKeep)
   local historyDir = aiconfig.getProjectRoot() .. '/.ai-history'
   local files = history.listHistoryFiles()
   common.log("Files in history folder:")
   for i, file in ipairs(files) do
     common.log("File " .. i .. ": " .. file)
   end
-  if #files > 10 then
+  if #files >  numberOfFilesToKeep then
     common.log(string.format("There are %%d files in the history folder", #files))
-    common.log(string.format("We need to remove %%d files", #files - 10))
-    for i = #files - 9, 1, -1 do  -- Corrected loop start index
+    common.log(string.format("We need to remove %%d files", #files - numberOfFilesToKeep))
+    for i = #files - (numberOfFilesToKeep -1), 1, -1 do  -- Corrected loop start index
       local file = files[i]
       local filePath = historyDir .. '/' .. file
       vim.fn.delete(filePath)
       common.log("Deleted oldest history file: " .. filePath)
     end
   else
-    common.log("There are less than 10 files in the history folder")
+    common.log("There are less than ".. numberOfFilesToKeep .. " files in the history folder")
   end
 end
 

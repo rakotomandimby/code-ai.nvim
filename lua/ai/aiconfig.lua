@@ -1,5 +1,32 @@
 local aiconfig = {}
 
+function aiconfig.findSystemInstructionsFile()
+  local path = vim.fn.getcwd() .. '/.ai-system-instructions.md'
+  local file = io.open(path, "r")
+  if file ~= nil then
+    io.close(file)
+    return path
+  else
+    return ""
+  end
+end
+
+function aiconfig.getSystemInstructions()
+  local path = aiconfig.findSystemInstructionsFile()
+  if path == "" then
+    return ""
+  end
+
+  local file = io.open(path, "r")
+  if not file then
+    return ""
+  end
+
+  local content = file:read("*all")
+  file:close()
+  return content
+end
+
 function aiconfig.findScannedFilesConfig()
   local path = vim.fn.getcwd() .. '/.ai-scanned-files'
   local file = io.open(path, "r")

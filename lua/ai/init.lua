@@ -9,7 +9,6 @@ local default_prompts = {
     command = 'AIIntroduceYourself',
     loading_tpl = 'Loading...',
     prompt_tpl = 'Say who you are, your version, and the currently used model',
-    instruction_tpl = 'Act as a command line command that has been issued with the --help flag',
     result_tpl = '${output}',
     require_input = false,
   }
@@ -161,7 +160,9 @@ function M.handle(name, input)
     update = M.createPopup(M.fill(def.loading_tpl .. scanned_files, args), width - 8, height - 4)
   end
   local prompt = M.fill(def.prompt_tpl, args)
-  local instruction = M.fill(def.instruction_tpl, args)
+  -- Get system instructions from file or fall back to command definition
+  local system_instructions = aiconfig.getSystemInstructions()
+  local instruction = system_instructions ~= "" and system_instructions or M.fill(def.instruction_tpl, args)
 
   -- Determine which models to use
   local anthropic_model = def.anthropic_model or M.opts.anthropic_model
@@ -291,6 +292,14 @@ function M.setup(opts)
     local scanned_files = aiconfig.listScannedFiles()
     local update = M.createPopup(scanned_files, width - 12, height - 8)
     update(scanned_files)
+  end, {})
+
+  vim.api.nvim_create_user_command('AIShowSystemInstructions', function()
+    local width = vim.fn.winwidth(0)
+    local height = vim.fn.winheight(0)
+    local instructions = aiconfig.getSystemInstructions()
+    local update = M.createPopup(instructions, width - 12, height - 8)
+    update(instructions)
   end, {})
 end
 

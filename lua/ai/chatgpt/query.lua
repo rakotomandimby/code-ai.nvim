@@ -9,8 +9,8 @@ local modelUsed = ""
 
 function query.formatResult(data)
   common.log("Inside ChatGPT formatResult")
-  local prompt_tokens = data.usage.prompt_tokens
-  local completion_tokens = data.usage.completion_tokens
+  local prompt_tokens = data.usage.prompt_tokens or 0 -- Default to 0 for disabled model
+  local completion_tokens = data.usage.completion_tokens or 0 -- Default to 0 for disabled model
 
   local formatted_prompt_tokens = string.format("%gk", math.floor(prompt_tokens / 1000))
   local formatted_completion_tokens = string.format("%gk", math.floor(completion_tokens / 1000))
@@ -26,9 +26,21 @@ query.askCallback = function(res, opts)
   common.askCallback(res, opts, query.formatResult)
 end
 
+local disabled_response = {
+  choices = { { message = { content = "Model is disabled" } } },
+  usage = { prompt_tokens = 0, completion_tokens = 0 }
+}
+
 function query.askHeavy(model, instruction, prompt, opts, agent_host)
   promptToSave = prompt
   modelUsed = model
+
+  -- Check if model is disabled
+  if model == "disabled" then
+    vim.schedule(function() query.askCallback({ status = 200, body = vim.json.encode(disabled_response) }, opts) end)
+    return
+  end
+
   local url = agent_host .. '/chatgpt'
   local project_context = aiconfig.listScannedFilesFromConfig()
   local body_chunks = {}
@@ -70,15 +82,19 @@ function query.askHeavy(model, instruction, prompt, opts, agent_host)
         end
       })
   end
-
   sendNextRequest(1)
-
 end
-
 
 function query.ask(model, instruction, prompt, opts, api_key)
   promptToSave = prompt
   modelUsed = model
+
+  -- Check if model is disabled
+  if model == "disabled" then
+    vim.schedule(function() query.askCallback({ status = 200, body = vim.json.encode(disabled_response) }, opts) end)
+    return
+  end
+
   local api_host = 'https://api.openai.com'
   -- local api_host = 'https://eowloffrpvxwtqp.m.pipedream.net'
   local path = '/v1/chat/completions'
@@ -111,5 +127,4 @@ function query.ask(model, instruction, prompt, opts, api_key)
 end
 
 return query
-
 

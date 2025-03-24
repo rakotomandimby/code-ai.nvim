@@ -17,8 +17,8 @@ function query.formatResult(data)
       return result
     else
       -- Extract token counts from the response
-      local prompt_tokens = data['usageMetadata']['promptTokenCount']
-      local answer_tokens = data['usageMetadata']['candidatesTokenCount']
+      local prompt_tokens = data['usageMetadata']['promptTokenCount'] or 0  -- Default to 0
+      local answer_tokens = data['usageMetadata']['candidatesTokenCount'] or 0 -- Default to 0
 
       -- Format token counts (e.g., "30k", "2k")
       local formatted_prompt_tokens = string.format("%gk", math.floor(prompt_tokens / 1000))
@@ -42,9 +42,21 @@ query.askCallback = function(res, opts)
     common.askCallback(res, opts, query.formatResult)
 end
 
+local disabled_response = {
+  candidates = { { content = { parts = { { text = "Model is disabled" } } }, finishReason = "STOP" } },
+  usageMetadata = { promptTokenCount = 0, candidatesTokenCount = 0 }
+}
+
 function query.askHeavy(model, instruction, prompt, opts, agent_host)
   promptToSave = prompt
   modelUsed = model
+
+  -- Check if model is disabled
+  if model == "disabled" then
+    vim.schedule(function() query.askCallback({ status = 200, body = vim.json.encode(disabled_response) }, opts) end)
+    return
+  end
+
   local url = agent_host .. '/gemini'
   local project_context = aiconfig.listScannedFilesFromConfig()
   local body_chunks = {}
@@ -64,7 +76,6 @@ function query.askHeavy(model, instruction, prompt, opts, agent_host)
   table.insert(body_chunks, {temperature = 0.2})
   table.insert(body_chunks, {top_p = 0.5})
   table.insert(body_chunks, {})
-
 
   local function sendNextRequest(i)
     if i > #body_chunks then
@@ -87,15 +98,18 @@ function query.askHeavy(model, instruction, prompt, opts, agent_host)
         end
       })
   end
-
   sendNextRequest(1)
-
-
 end
 
 function query.ask(model, instruction, prompt, opts, api_key)
   promptToSave = prompt
   modelUsed = model
+
+  if model == "disabled" then
+    vim.schedule(function() query.askCallback({ status = 200, body = vim.json.encode(disabled_response) }, opts) end)
+    return
+  end
+
   local api_host = 'https://generativelanguage.googleapis.com'
   -- local api_host = 'https://eowloffrpvxwtqp.m.pipedream.net'
   local path = '/v1beta/models/' .. model .. ':generateContent'
@@ -132,3 +146,4 @@ function query.ask(model, instruction, prompt, opts, api_key)
 end
 
 return query
+

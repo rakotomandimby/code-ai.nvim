@@ -9,8 +9,8 @@ local modelUsed = ""
 
 function query.formatResult(data)
   common.log("Inside Anthropic formatResult")
-  local input_tokens = data.usage.input_tokens
-  local output_tokens = data.usage.output_tokens
+  local input_tokens = data.usage.input_tokens or 0
+  local output_tokens = data.usage.output_tokens or 0
 
   local formatted_input_tokens = string.format("%gk", math.floor(input_tokens / 1000))
   local formatted_output_tokens = string.format("%gk", math.floor(output_tokens / 1000))
@@ -26,9 +26,20 @@ query.askCallback = function(res, opts)
   common.askCallback(res, opts, query.formatResult)
 end
 
+local disabled_response = {
+  content = { { text = "Model is disabled" } },
+  usage = { input_tokens = 0, output_tokens = 0 }
+}
+
 function query.askHeavy(model, instruction, prompt, opts, agent_host)
   promptToSave = prompt
   modelUsed = model
+
+  if model == "disabled" then
+    vim.schedule(function() query.askCallback({ status = 200, body = vim.json.encode(disabled_response) }, opts) end)
+    return
+  end
+
   local url = agent_host .. '/anthropic'
   local project_context = aiconfig.listScannedFilesFromConfig()
   local body_chunks = {}
@@ -70,15 +81,19 @@ function query.askHeavy(model, instruction, prompt, opts, agent_host)
         end
       })
   end
-
   sendNextRequest(1)
-
 end
 
 
 function query.ask(model, instruction, prompt, opts, api_key)
   promptToSave = prompt
   modelUsed = model
+
+  if model == "disabled" then
+    vim.schedule(function() query.askCallback({ status = 200, body = vim.json.encode(disabled_response) }, opts) end)
+    return
+  end
+
   local api_host = 'https://api.anthropic.com'
   -- local api_host = 'https://eowloffrpvxwtqp.m.pipedream.net'
   local path = '/v1/messages'
@@ -109,5 +124,4 @@ function query.ask(model, instruction, prompt, opts, api_key)
 end
 
 return query
-
 

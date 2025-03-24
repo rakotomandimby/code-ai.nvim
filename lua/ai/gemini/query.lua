@@ -43,7 +43,7 @@ query.askCallback = function(res, opts)
 end
 
 local disabled_response = {
-  candidates = { { content = { parts = { { text = "Model is disabled" } } }, finishReason = "STOP" } },
+  candidates = { { content = { parts = { { text = "Gemini models are disabled" } } }, finishReason = "STOP" } },
   usageMetadata = { promptTokenCount = 0, candidatesTokenCount = 0 }
 }
 

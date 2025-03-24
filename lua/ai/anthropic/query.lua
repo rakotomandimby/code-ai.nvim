@@ -27,7 +27,7 @@ query.askCallback = function(res, opts)
 end
 
 local disabled_response = {
-  content = { { text = "Model is disabled" } },
+  content = { { text = "Anthropic models are disabled" } },
   usage = { input_tokens = 0, output_tokens = 0 }
 }
 

@@ -27,7 +27,7 @@ query.askCallback = function(res, opts)
 end
 
 local disabled_response = {
-  choices = { { message = { content = "Model is disabled" } } },
+  choices = { { message = { content = "ChatGPT models are disabled" } } },
   usage = { prompt_tokens = 0, completion_tokens = 0 }
 }
 

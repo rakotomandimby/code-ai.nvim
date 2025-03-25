@@ -1,3 +1,23 @@
+# Sort files by size, bigger to smaller
+
+`aiconfig.listScannedFilesFromConfig()` returns a list of files are scanned and orders it by full path.
+
+I want to change that and order it by file size, from bigger to smaller.
+
+Tell me the changes to make to the code in order to achieve that.
+
+
+
+
+
+
+# This is claude-3-7-sonnet-latest answer (11k in, 2k out)
+
+# Sorting Files by Size (Bigger to Smaller)
+
+To modify the `aiconfig.listScannedFilesFromConfig()` function to sort files by size from bigger to smaller, we need to update the code in `lua/ai/aiconfig.lua`. Here's the implementation:
+
+```lua
 local aiconfig = {}
 
 function aiconfig.findSystemInstructionsFile()
@@ -213,4 +233,47 @@ function aiconfig.listScannedFiles()
 end
 
 return aiconfig
+```
+
+## Changes Made:
+
+The key changes are in the `listScannedFilesFromConfig()` function:
+
+1. Instead of just collecting file paths and sorting them alphabetically, I've modified the function to:
+   - Create a list of tables containing both the file path and its size
+   - Sort this list by file size in descending order (bigger to smaller)
+   - Extract just the file paths from the sorted list for the final return value
+
+2. Steps added:
+   ```lua
+   -- Step 3: Create a list of files with their sizes
+   local files_with_sizes = {}
+   for file, _ in pairs(included_files) do
+     local file_info = vim.loop.fs_stat(file)
+     if file_info and file_info.type == 'file' then
+       table.insert(files_with_sizes, {
+         path = file,
+         size = file_info.size
+       })
+     end
+   end
+
+   -- Step 4: Sort by file size (bigger to smaller)
+   table.sort(files_with_sizes, function(a, b)
+     return a.size > b.size
+   end)
+
+   -- Step 5: Extract just the file paths from the sorted list
+   local final_files = {}
+   for _, file_data in ipairs(files_with_sizes) do
+     table.insert(final_files, file_data.path)
+   end
+   ```
+
+3. Removed the original sorting line that sorted by filename:
+   ```lua
+   -- table.sort(final_files) -- This was removed
+   ```
+
+With these changes, the files will now be presented in order of size (largest first), which can help prioritize the most substantial files in the project when working with LLMs.
 

@@ -1,6 +1,33 @@
+# Manage file exclusion more efficiently. 
+
+`aiconfig.listScannedFilesFromConfig()` handle the inclusion and exclusion of files based on a configuration file.
+
+I find its way to handle it to be the worst on earth because when `exclude_patterns` happens to have something such as `node_modules` or `dist` in it,
+execution is very slow.
+
+I want to change that, and first, I have put the `./lua/ai/globpattern.lua` to be an utility to handle the glob pattern.
+Analyze the code of `./lua/ai/globpattern.lua` and laverage it to improve the performance of `aiconfig.listScannedFilesFromConfig()`.
+I propose that we check the matching of the filepath against the `exclude_patterns` before pushing it to the `included_files` list.
+We should be able to get rid of the `excluded_files` list, because we already avoided pushing the excluded files to the `included_files` list.
+
+Propose a new implementation of `aiconfig.listScannedFilesFromConfig()` that uses the utility functions from `globpattern.lua` to handle the inclusion and exclusion of files more efficiently.
+
+
+
+# This is gemini-2.5-pro-exp-03-25 answer (12k in, 3k out)
+
+Okay, I understand the performance issue with the current approach. Gathering all files matching include patterns first, especially broad ones like `**/*`, and *then* filtering out potentially large excluded sets like `node_modules/**` is indeed inefficient.
+
+Using the `globpattern.lua` utility to convert exclusion globs into Lua patterns and checking each potential file *before* adding it to the list is a much better strategy.
+
+Here's the proposed new implementation for `lua/ai/aiconfig.lua`, incorporating this change:
+
+```lua
+-- lua/ai/aiconfig.lua
+local globpattern = require('ai.globpattern') -- Import the glob pattern utility
+local common = require('ai.common') -- Import common utilities like logging
+
 local aiconfig = {}
-local common = require("ai.common")
-local globpattern = require("ai.globpattern")
 
 function aiconfig.findSystemInstructionsFile()
   local path = vim.fn.getcwd() .. '/.ai-system-instructions.md'
@@ -78,6 +105,12 @@ function aiconfig.getProjectRoot()
   return project_root
 end
 
+
+--[[
+Improved function to list scanned files based on .ai-scanned-files config.
+It now checks exclusion patterns *before* adding files to the list,
+improving performance significantly for large exclusion sets.
+]]
 function aiconfig.listScannedFilesFromConfig()
   local config = aiconfig.findScannedFilesConfig()
   if config == "" then
@@ -211,7 +244,7 @@ end
 function aiconfig.listScannedFiles()
   local analyzed_files_as_array = aiconfig.listScannedFilesFromConfig()
   if #analyzed_files_as_array == 0 then
-    return "# No files to analyze under project root " .. aiconfig.getProjectRoot()
+    return "# No files to analyze under project root " .. aiconfig.getProjectRoot() .. " based on .ai-scanned-files"
   end
 
   local analyzed_files_as_string = " will be analyzed under project root ".. aiconfig.getProjectRoot() .. ":\n"
@@ -248,4 +281,21 @@ function aiconfig.listScannedFiles()
 end
 
 return aiconfig
+```
 
+**Summary of Changes:**
+
+1.  **Require `globpattern`:** Added `local globpattern = require('ai.globpattern')` at the top.
+2.  **Require `common`:** Added `local common = require('ai.common')` for logging.
+3.  **Pre-compile Exclude Patterns:** The exclude glob patterns read from the config file are converted into Lua regex patterns using `globpattern.globtopattern()` *once* before processing any include patterns.
+4.  **Iterate Includes, Filter Immediately:**
+    *   The code iterates through each `include_pattern`.
+    *   `vim.fn.glob()` finds potential files for that pattern.
+    *   For *each* potential file, it checks against the pre-compiled `exclude_lua_patterns`.
+    *   Only if a file does *not* match any exclude pattern is it considered for inclusion.
+5.  **Duplicate Check:** A `processed_files` table (used as a set) is introduced to prevent adding the same file multiple times if it matches more than one include pattern.
+6.  **Directly Build `files_with_sizes`:** Files passing the exclusion check and the file type check (`vim.loop.fs_stat`) are added directly to the `files_with_sizes` list. There's no intermediate `included_files` table holding potentially millions of entries anymore.
+7.  **Logging:** Added `common.log` statements to help debug the file inclusion/exclusion process.
+8.  **Removed Redundant Step:** The second loop that iterated through `exclude_patterns` to remove files is completely gone.
+
+This revised approach should significantly speed up the process when dealing with broad include patterns and large, well-defined exclude patterns like `node_modules/**`, `dist/**`, or `build/**`.

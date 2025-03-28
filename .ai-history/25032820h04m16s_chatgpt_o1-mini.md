@@ -7,7 +7,13 @@ execution is very slow.
 
 I want to change that, and first, I have put the `./lua/ai/globpattern.lua` to be an utility to handle the glob pattern.
 Analyze the code of `./lua/ai/globpattern.lua` and laverage it to improve the performance of `aiconfig.listScannedFilesFromConfig()`.
-I propose that we check the matching of the filepath against the `exclude_patterns` before pushing it to the `included_files` list.
-We should be able to get rid of the `excluded_files` list, because we already avoided pushing the excluded files to the `included_files` list.
+I propose that we keep the current way to list files matching the `include_patterns` and then we filter out the files that match the `exclude_patterns` using the utility functions from `globpattern.lua`.
 
 Propose a new implementation of `aiconfig.listScannedFilesFromConfig()` that uses the utility functions from `globpattern.lua` to handle the inclusion and exclusion of files more efficiently.
+
+
+
+# This is o1-mini answer (0k in, 0k out)
+
+ChatGPT API Error: Unsupported value: 'messages[0].role' does not support 'system' with this model.
+

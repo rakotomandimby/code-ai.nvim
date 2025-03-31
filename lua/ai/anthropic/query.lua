@@ -22,8 +22,32 @@ function query.formatResult(data)
   return result
 end
 
+-- Added a new function to handle and format Anthropic API errors
+function query.formatError(status, body)
+  common.log("Formatting Anthropic API error: " .. body)
+  local error_result
+  -- Try to parse the error JSON
+  local success, error_data = pcall(vim.fn.json_decode, body)
+  if success and error_data and error_data.error then
+    -- Extract specific error information
+    local error_type = error_data.error.type or "unknown_error"
+    local error_message = error_data.error.message or "Unknown error occurred"
+    error_result = string.format(
+      "# Anthropic API Error (%s)\n\n**Error Type**: %s\n**Message**: %s\n",
+      status,
+      error_type,
+      error_message
+    )
+  else
+    -- Fallback for unexpected error format
+    error_result = string.format("# Anthropic API Error (%s)\n\n```\n%s\n```", status, body)
+  end
+  return error_result
+end
+
 query.askCallback = function(res, opts)
-  common.askCallback(res, opts, query.formatResult)
+  local handleError = query.formatError  -- Set our custom error handler
+  common.askCallback(res, {handleResult = opts.handleResult, handleError = handleError, callback = opts.callback}, query.formatResult)
 end
 
 local disabled_response = {

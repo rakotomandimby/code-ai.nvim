@@ -38,8 +38,34 @@ function query.formatResult(data)
   return result
 end
 
+-- Added a new function to handle and format Gemini API errors
+function query.formatError(status, body)
+  common.log("Formatting Gemini API error: " .. body)
+  local error_result
+  -- Try to parse the error JSON
+  local success, error_data = pcall(vim.fn.json_decode, body)
+  if success and error_data and error_data.error then
+    -- Extract specific error information
+    local error_code = error_data.error.code or status
+    local error_message = error_data.error.message or "Unknown error occurred"
+    local error_status = error_data.error.status or "ERROR"
+    error_result = string.format(
+      "# Gemini API Error (%s)\n\n**Error Code**: %s\n**Status**: %s\n**Message**: %s\n",
+      status,
+      error_code,
+      error_status,
+      error_message
+    )
+  else
+    -- Fallback for unexpected error format
+    error_result = string.format("# Gemini API Error (%s)\n\n```\n%s\n```", status, body)
+  end
+  return error_result
+end
+
 query.askCallback = function(res, opts)
-    common.askCallback(res, opts, query.formatResult)
+    local handleError = query.formatError  -- Set our custom error handler
+    common.askCallback(res, {handleResult = opts.handleResult, handleError = handleError, callback = opts.callback}, query.formatResult)
 end
 
 local disabled_response = {

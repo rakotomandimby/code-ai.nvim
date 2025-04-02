@@ -1,3 +1,34 @@
+# Make `aiconfig.listScannedFilesAsFormattedTable()` print a beautiful table 
+
+The current implementation of `aiconfig.listScannedFilesAsFormattedTable()` prints two lists of files in two tabble column.
+
+- Values are accurate
+- First column formatting is correct
+- Second column formatting is wrong: the right border of the second column is not aligned at all.
+
+I guess if the first column left and right borders are aligned, 
+the maximum width of the content has been calculated somewhere 
+so that the second column alignement could leverage it.
+
+Propose a solution to fix the second column right border alignment.
+
+
+
+# This is gemini-2.5-pro-exp-03-25 answer (14k in, 4k out)
+
+Okay, I understand the issue. The second column's right border isn't aligned because its width isn't being calculated and used for padding, unlike the first column.
+
+Here's the plan:
+
+1.  Calculate the maximum width required for the second column, considering both its header and the longest file path string it will contain.
+2.  Use this maximum width to pad the second column's header, separator, and content, just like it's done for the first column.
+
+Let's modify the `lua/ai/aiconfig.lua` file.
+
+```lua
+-- lua/ai/aiconfig.lua
+-- Add comments to indicate changes
+
 local aiconfig = {}
 local common = require("ai.common")
 local globpattern = require("ai.globpattern")
@@ -226,6 +257,13 @@ local function format_size(size)
   end
 end
 
+--[[
+  Generates a Markdown formatted table showing scanned files.
+  The table has two columns:
+  1. Files sorted by size (descending).
+  2. Files sorted by name (ascending).
+  Includes total size and project root information.
+]]
 function aiconfig.listScannedFilesAsFormattedTable()
   local analyzed_files_paths = aiconfig.listScannedFilesFromConfig()
   local project_root = aiconfig.getProjectRoot()
@@ -237,9 +275,17 @@ function aiconfig.listScannedFilesAsFormattedTable()
   local files_data = {}
   local total_size = 0
   local max_width_col1 = 0 -- To store the max width for the first column content
-  local max_width_col2 = 0 -- NEW: To store the max width for the second column content
+  -- CHANGE: Initialize max width for the second column
+  local max_width_col2 = 0
 
-  -- Gather file data (path, size, formatted size) and calculate total size
+  -- Define headers early to include their length in width calculation
+  local header1 = "Sorted by Size (Desc)"
+  local header2 = "Sorted by Name (Asc)"
+  -- CHANGE: Initialize max widths with header lengths
+  max_width_col1 = #header1
+  max_width_col2 = #header2
+
+  -- Gather file data (path, size, formatted size) and calculate total size and max widths
   for _, relative_path in ipairs(analyzed_files_paths) do
     local full_path = project_root .. '/' .. relative_path
     local stat = vim.loop.fs_stat(full_path)
@@ -259,8 +305,7 @@ function aiconfig.listScannedFilesAsFormattedTable()
     if #display_str > max_width_col1 then
       max_width_col1 = #display_str
     end
-    
-    -- NEW: Also track max width for the second column (same display format)
+    -- CHANGE: Update max width needed for the second column (using the same display string for now, as it's used in both columns)
     if #display_str > max_width_col2 then
       max_width_col2 = #display_str
     end
@@ -285,29 +330,33 @@ function aiconfig.listScannedFilesAsFormattedTable()
   local result_lines = {}
   table.insert(result_lines, "# A total of " .. total_size_str .. " will be analyzed under project root " .. project_root .. ":\n")
 
-  -- Define headers, ensuring both headers have enough space
-  local header1 = "Sorted by Size (Desc)"
-  local header2 = "Sorted by Name (Asc)"
+  -- Define headers, ensuring they are padded to the calculated max widths
   local padded_header1 = string.format("%-" .. max_width_col1 .. "s", header1)
-  -- NEW: Adjust header2 to have consistent width
+  -- CHANGE: Pad the second header
   local padded_header2 = string.format("%-" .. max_width_col2 .. "s", header2)
   table.insert(result_lines, "| " .. padded_header1 .. " | " .. padded_header2 .. " |")
 
-  -- Define separator line, matching the padding for both columns
+  -- Define separator line, matching the padding
   local separator1 = string.rep("-", max_width_col1)
-  -- NEW: Use max_width_col2 for second column separator
+  -- CHANGE: Create separator for the second column based on its max width
   local separator2 = string.rep("-", max_width_col2)
   table.insert(result_lines, "|-" .. separator1 .. "-|-" .. separator2 .. "-|")
 
   -- Add table rows
-  for i = 1, #sorted_by_size do
+  -- CHANGE: Ensure we iterate up to the maximum number of rows needed (which is the total number of files)
+  local num_rows = #files_data
+  for i = 1, num_rows do
+    -- CHANGE: Handle cases where one list might be shorter (though they should be the same length here)
     local item_size = sorted_by_size[i]
     local item_name = sorted_by_name[i]
 
     -- Pad the first column content to the max width
-    local padded_col1_content = string.format("%-" .. max_width_col1 .. "s", item_size.display_str)
-    -- NEW: Pad the second column content to the max width
-    local padded_col2_content = string.format("%-" .. max_width_col2 .. "s", item_name.display_str)
+    local col1_content = item_size and item_size.display_str or "" -- Handle potential nil if lists differ in size
+    local padded_col1_content = string.format("%-" .. max_width_col1 .. "s", col1_content)
+
+    -- CHANGE: Pad the second column content to its max width
+    local col2_content = item_name and item_name.display_str or "" -- Handle potential nil
+    local padded_col2_content = string.format("%-" .. max_width_col2 .. "s", col2_content)
 
     table.insert(result_lines, "| " .. padded_col1_content .. " | " .. padded_col2_content .. " |")
   end
@@ -317,4 +366,14 @@ end
 
 
 return aiconfig
+```
 
+**Summary of Changes in `aiconfig.listScannedFilesAsFormattedTable()`:**
+
+1.  **`max_width_col2` Initialization:** Added `max_width_col2` and initialized it (along with `max_width_col1`) with the length of the respective headers (`header2` and `header1`). This ensures the headers themselves are considered for column width.
+2.  **`max_width_col2` Calculation:** Inside the loop that gathers file data, added a check to update `max_width_col2` if the current `display_str` is longer.
+3.  **Header Padding:** Changed `padded_header2` to use `string.format` with `max_width_col2` for correct padding.
+4.  **Separator Padding:** Changed `separator2` to use `string.rep("-", max_width_col2)` to match the calculated width.
+5.  **Content Padding:** In the final loop that builds the table rows, added padding for the second column's content (`item_name.display_str`) using `string.format("%-" .. max_width_col2 .. "s", col2_content)`. Also added checks (`item_size and ... or ""`) just in case the lists could somehow end up with different lengths, although in the current logic they won't.
+
+With these changes, the second column's content, header, and separator should all be padded correctly, resulting in an aligned right border for the Markdown table.

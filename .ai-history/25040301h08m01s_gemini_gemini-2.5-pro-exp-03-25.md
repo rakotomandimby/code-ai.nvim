@@ -1,3 +1,28 @@
+# Make `aiconfig.listScannedFilesAsFormattedTable()` print a beautiful table 
+
+The current implementation of `aiconfig.listScannedFilesAsFormattedTable()` prints two lists of files in two tabble column.
+
+- Values are accurate
+- First column formatting is wrong: the right border of the first column is not aligned at all.
+- Second column formatting is wrong: the right border of the second column is not aligned at all.
+
+Lets change the code of `aiconfig.listScannedFilesAsFormattedTable()` to make a first pass loop dedicated to maximum file name length calculation, 
+and a second pass loop to print the table.
+
+Remove checking terminal size, because displaying that list is done inside a pop-up in a terminal application.
+
+Propose me the changes to make to `aiconfig.listScannedFilesAsFormattedTable()` to make it print a beautiful table. 
+
+
+
+# This is gemini-2.5-pro-exp-03-25 answer (14k in, 4k out)
+
+Okay, I understand. The current table formatting logic needs refinement to ensure proper alignment in the Markdown output, regardless of terminal size. We'll implement the two-pass approach you suggested: first calculate the maximum display width needed for any file entry (path + size string), then use that width to format the table cells consistently.
+
+Here's the updated content for `lua/ai/aiconfig.lua` with the revised `listScannedFilesAsFormattedTable` function:
+
+```lua
+-- lua/ai/aiconfig.lua
 local aiconfig = {}
 local common = require("ai.common")
 local globpattern = require("ai.globpattern")
@@ -323,4 +348,22 @@ end
 
 
 return aiconfig
+```
 
+**Key Changes:**
+
+1.  **Two-Pass Logic:**
+    *   **Pass 1:** Iterates through the files (`analyzed_files_paths`), calculates the size, formats the size string (`size_str`), creates the *final display string* (`display_str = relative_path .. " (" .. size_str .. ")"`), stores this `display_str` along with other data in `files_data`, and crucially, calculates `max_display_length` based on the length of these `display_str` values.
+    *   **Pass 2:** Uses the calculated `max_display_length` to determine the necessary width for each column (`col1_width`, `col2_width`), ensuring the width accommodates both the header and the longest content string. It then builds the table rows, padding each cell's content (`display_str`) to the calculated column width using a `pad_right` helper function.
+
+2.  **Removed Terminal Width Dependency:** All calculations related to `vim.o.columns` and `max_col_width` have been removed. The table width is now solely determined by the content and headers.
+
+3.  **Removed Path Truncation:** The `format_path_display` function and its truncation logic (`...`) were removed. The full `display_str` is now used, and padding handles the alignment. This usually looks better unless paths are exceptionally long.
+
+4.  **Padding Function:** A simple `pad_right` helper function was added to ensure strings are padded with spaces to the required width for consistent alignment within the Markdown table source.
+
+5.  **Separator Line:** The separator line (`|---|---|`) now uses dashes (`-`) corresponding to the calculated `col1_width` and `col2_width`, which is standard Markdown table syntax.
+
+6.  **Logging:** Added more specific logging messages to trace the two passes and calculated values, which can be helpful for debugging.
+
+This revised function should produce a well-aligned Markdown table in the popup window.

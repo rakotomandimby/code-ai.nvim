@@ -1,3 +1,32 @@
+# Make `aiconfig.listScannedFilesAsFormattedTable()` print a beautiful table 
+
+The current implementation of `aiconfig.listScannedFilesAsFormattedTable()` prints two lists of files in two tabble column.
+
+- Values are accurate
+- First column formatting is wrong: the right border of the first column is not aligned at all.
+- Second column formatting is wrong: the right border of the second column is not aligned at all.
+
+Lets change the code of `aiconfig.listScannedFilesAsFormattedTable()` to make a first pass loop dedicated to maximum file name length calculation, 
+and a second pass loop to print the table.
+
+Propose me the changes to make to `aiconfig.listScannedFilesAsFormattedTable()` to make it print a beautiful table. 
+
+
+
+# This is gemini-2.5-pro-exp-03-25 answer (14k in, 4k out)
+
+Okay, I understand the issue. The current table formatting doesn't correctly calculate the required width for each column *before* generating the rows, leading to misaligned borders, especially when path truncation occurs.
+
+Let's refactor `aiconfig.listScannedFilesAsFormattedTable` to perform these steps:
+
+1.  Gather all file data (path, size, formatted size).
+2.  Sort the data by size (desc) and name (asc).
+3.  **First Pass:** Iterate through the data to determine the *maximum displayed width* needed for each column, considering potential path truncation and the appended size string. Also, ensure the headers fit.
+4.  **Second Pass:** Build the Markdown table string, using the calculated maximum widths to pad each cell correctly.
+
+Here's the updated content for `lua/ai/aiconfig.lua`:
+
+```lua
 local aiconfig = {}
 local common = require("ai.common")
 local globpattern = require("ai.globpattern")
@@ -226,7 +255,18 @@ local function format_size(size)
   end
 end
 
--- *** START: Modified listScannedFilesAsFormattedTable function ***
+--[[
+  Generates a Markdown table listing scanned files, sorted by size and name.
+
+  This function performs the following steps:
+  1. Retrieves the list of scanned file paths (already sorted by size).
+  2. Gathers detailed data (path, size, formatted size) for each file.
+  3. Creates a second list sorted by file path name.
+  4. Calculates the maximum required width for each column by simulating
+     the final display string (including truncated path and size) for every file.
+  5. Builds the Markdown table string, padding each cell to the calculated
+     maximum width for proper alignment.
+]]
 function aiconfig.listScannedFilesAsFormattedTable()
   local analyzed_files_paths = aiconfig.listScannedFilesFromConfig()
   local project_root = aiconfig.getProjectRoot()
@@ -235,35 +275,25 @@ function aiconfig.listScannedFilesAsFormattedTable()
     return "# No files to analyze under project root " .. project_root
   end
 
+  -- Step 1 & 2: Gather data and create sorted lists
   local files_data = {}
   local total_size = 0
-  local max_display_length = 0 -- Renamed: Tracks the max length of the combined "path (size)" string
 
-  -- Pass 1: Gather data and calculate maximum display string length
-  common.log("Starting Pass 1: Gathering file data and calculating max display length")
   for _, relative_path in ipairs(analyzed_files_paths) do
     local full_path = project_root .. '/' .. relative_path
     local stat = vim.loop.fs_stat(full_path)
     local size = stat and stat.size or 0
     total_size = total_size + size
     local size_str = format_size(size)
-    -- Create the string that will actually be displayed in the table cell
-    local display_str = relative_path .. " (" .. size_str .. ")"
-
-    -- Track the maximum length needed for any cell content
-    max_display_length = math.max(max_display_length, #display_str)
 
     table.insert(files_data, {
       path = relative_path,
       size = size,
-      size_str = size_str,
-      display_str = display_str -- Store the pre-formatted display string
+      size_str = size_str
     })
-    common.log("Processed: " .. display_str .. " (Length: " .. #display_str .. ")")
   end
-  common.log("Pass 1 Complete. Max display length: " .. max_display_length)
 
-  -- files_data is already sorted by size descending because analyzed_files_paths was sorted by size
+  -- files_data is already sorted by size descending because analyzed_files_paths was
   local sorted_by_size = files_data
 
   -- Create a copy and sort it by name ascending
@@ -278,49 +308,106 @@ function aiconfig.listScannedFilesAsFormattedTable()
   -- Format total size
   local total_size_str = format_size(total_size)
 
-  -- Pass 2: Build the Markdown table string using calculated max length for padding
-  common.log("Starting Pass 2: Building Markdown table")
+  -- Step 3: Calculate maximum column widths (First Pass)
+  local max_path_display_length = 60 -- Max characters for the path part before truncation
+  local max_col1_width = 0
+  local max_col2_width = 0
+
+  -- Helper function to truncate path for display (returns only the path part)
+  local function truncate_path_display(path)
+    if #path > max_path_display_length then
+      local half = math.floor((max_path_display_length - 3) / 2) -- -3 for "..."
+      -- Ensure half is not negative if max_path_display_length is very small
+      half = math.max(0, half)
+      if half == 0 then return "..." end -- Handle extremely short max length
+      return string.sub(path, 1, half) .. "..." .. string.sub(path, -half)
+    else
+      return path
+    end
+  end
+
+  -- Helper function to get the full display string for a cell
+  local function get_cell_display_string(item)
+      local truncated_path = truncate_path_display(item.path)
+      return truncated_path .. " (" .. item.size_str .. ")"
+  end
+
+  -- Iterate to find max widths
+  for i = 1, #files_data do
+    local item_size = sorted_by_size[i]
+    local item_name = sorted_by_name[i]
+
+    local display_str_col1 = get_cell_display_string(item_size)
+    local display_str_col2 = get_cell_display_string(item_name)
+
+    max_col1_width = math.max(max_col1_width, #display_str_col1)
+    max_col2_width = math.max(max_col2_width, #display_str_col2)
+  end
+
+  -- Ensure headers fit
+  local header1 = "Sorted by Size (Desc)"
+  local header2 = "Sorted by Name (Asc)"
+  max_col1_width = math.max(max_col1_width, #header1)
+  max_col2_width = math.max(max_col2_width, #header2)
+
+  -- Step 4: Build the Markdown table string (Second Pass)
   local result_lines = {}
   table.insert(result_lines, "# A total of " .. total_size_str .. " will be analyzed under project root " .. project_root .. ":\n")
 
-  -- Define headers
-  local header1 = "Sorted by Size (Desc)"
-  local header2 = "Sorted by Name (Asc)"
-
-  -- Calculate column widths based on headers and max content length
-  local col1_width = math.max(#header1, max_display_length)
-  local col2_width = math.max(#header2, max_display_length)
-  common.log("Calculated column widths: Col1=" .. col1_width .. ", Col2=" .. col2_width)
-
-  -- Helper function for padding strings to a fixed width (left-aligned)
+  -- Helper function to pad a string to a specific width
   local function pad_right(str, width)
     return str .. string.rep(" ", width - #str)
   end
 
-  -- Add header row with padding
-  table.insert(result_lines, "| " .. pad_right(header1, col1_width) .. " | " .. pad_right(header2, col2_width) .. " |")
+  -- Add header row
+  table.insert(result_lines, "| " .. pad_right(header1, max_col1_width) .. " | " .. pad_right(header2, max_col2_width) .. " |")
 
-  -- Add separator line based on calculated column widths
-  table.insert(result_lines, "|-" .. string.rep("-", col1_width) .. "-|-" .. string.rep("-", col2_width) .. "-|") -- Use '-' for separators
+  -- Add separator line (using Markdown alignment syntax)
+  table.insert(result_lines, "|:" .. string.rep("-", max_col1_width) .. "|:" .. string.rep("-", max_col2_width) .. "|")
+  -- Alternative separator: "| " .. string.rep("-", max_col1_width) .. " | " .. string.rep("-", max_col2_width) .. " |"
 
-  -- Add table rows with padding
-  for i = 1, #sorted_by_size do
-    -- Get the pre-calculated display strings
-    local display_size = sorted_by_size[i].display_str
-    local display_name = sorted_by_name[i].display_str
+  -- Add table rows
+  for i = 1, #files_data do
+    local item_size = sorted_by_size[i]
+    local item_name = sorted_by_name[i]
 
-    -- Pad the display strings to the calculated column widths
-    local padded_display_size = pad_right(display_size, col1_width)
-    local padded_display_name = pad_right(display_name, col2_width)
+    -- Generate the display strings again (could optimize by storing from first pass if needed)
+    local display_col1 = get_cell_display_string(item_size)
+    local display_col2 = get_cell_display_string(item_name)
 
-    table.insert(result_lines, "| " .. padded_display_size .. " | " .. padded_display_name .. " |")
+    -- Pad the cell content
+    local cell1 = pad_right(display_col1, max_col1_width)
+    local cell2 = pad_right(display_col2, max_col2_width)
+
+    table.insert(result_lines, "| " .. cell1 .. " | " .. cell2 .. " |")
   end
-  common.log("Pass 2 Complete. Table built.")
 
   return table.concat(result_lines, "\n")
 end
--- *** END: Modified listScannedFilesAsFormattedTable function ***
 
 
 return aiconfig
+```
 
+**Key Changes:**
+
+1.  **Gather Data First:** The code now gathers all `files_data` (path, size, size_str) before proceeding.
+2.  **Sorting:** Creates `sorted_by_size` (which `files_data` already is) and `sorted_by_name`.
+3.  **`truncate_path_display` Helper:** A simplified helper function now *only* handles the path truncation logic.
+4.  **`get_cell_display_string` Helper:** This new helper combines the (potentially truncated) path with the size string `(size_str)` to get the exact string that will be displayed in a cell.
+5.  **First Pass for Width Calculation:**
+    *   Iterates through the `files_data` index (`i`).
+    *   For each `i`, it gets the corresponding item from `sorted_by_size` and `sorted_by_name`.
+    *   It calls `get_cell_display_string` for both items to determine the *actual* string length that will be displayed in each column for that row.
+    *   It updates `max_col1_width` and `max_col2_width` using `math.max`.
+    *   It also ensures the column widths are at least as large as the headers.
+6.  **`pad_right` Helper:** A simple helper function to add spaces to the right of a string to reach a target width.
+7.  **Second Pass for Table Building:**
+    *   Builds the header and separator lines using the calculated `max_col1_width` and `max_col2_width`. The separator line now uses Markdown's alignment syntax (`|:---|:---|`) for potentially better rendering in some viewers, though a simple dash separator also works.
+    *   Iterates through the data again.
+    *   Calls `get_cell_display_string` again to get the content for each cell.
+    *   Uses `pad_right` to pad the cell content to the maximum width calculated in the first pass.
+    *   Constructs the table row string with correctly padded cells.
+8.  **Removed Terminal Width Logic:** The complex logic trying to adapt to terminal width was removed, simplifying the function and making the output consistent regardless of the terminal size. A fixed `max_path_display_length` is used for truncation instead.
+
+This revised structure ensures that the padding applied in the final table generation step is based on the *actual maximum width* required by any cell in that column, resulting in a properly aligned Markdown table.

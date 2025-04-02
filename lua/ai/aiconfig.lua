@@ -172,7 +172,7 @@ function aiconfig.listScannedFilesFromConfig()
   return final_files
 end
 
-function aiconfig.listScannedFilesAsText()
+function aiconfig.listScannedFilesAsSentence()
   local analyzed_files_as_array = aiconfig.listScannedFilesFromConfig()
   local num_files = #analyzed_files_as_array
 
@@ -208,7 +208,7 @@ function aiconfig.contentOf(file)
   return ""
 end
 
-function aiconfig.listScannedFiles()
+function aiconfig.listScannedFilesAsFormattedTable()
   local analyzed_files_as_array = aiconfig.listScannedFilesFromConfig()
   if #analyzed_files_as_array == 0 then
     return "# No files to analyze under project root " .. aiconfig.getProjectRoot()

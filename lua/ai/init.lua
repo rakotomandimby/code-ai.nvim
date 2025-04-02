@@ -156,7 +156,7 @@ function M.handle(name, input)
   if (number_of_files == 0 or not use_anthropic_agent or not use_gemini_agent or not use_chatgpt_agent ) then
     update = M.createPopup(M.fill(def.loading_tpl , args), width - 8, height - 4)
   else
-    local scanned_files = aiconfig.listScannedFiles()
+    local scanned_files = aiconfig.listScannedFilesAsFormattedTable()
     update = M.createPopup(M.fill(def.loading_tpl .. scanned_files, args), width - 8, height - 4)
   end
   local prompt = M.fill(def.prompt_tpl, args)
@@ -289,7 +289,7 @@ function M.setup(opts)
   vim.api.nvim_create_user_command('AIListScannedFiles', function()
     local width = vim.fn.winwidth(0)
     local height = vim.fn.winheight(0)
-    local scanned_files = aiconfig.listScannedFiles()
+    local scanned_files = aiconfig.listScannedFilesAsFormattedTable()
     local update = M.createPopup(scanned_files, width - 12, height - 8)
     update(scanned_files)
   end, {})

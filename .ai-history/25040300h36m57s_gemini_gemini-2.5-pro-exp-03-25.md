@@ -1,3 +1,38 @@
+# Make `aiconfig.listScannedFilesAsFormattedTable()` print a beautiful table 
+
+The current implementation of `aiconfig.listScannedFilesAsFormattedTable()` prints a list of files with their sizes between brackets.
+
+This prints mostly like this:
+
+```
+# A total of 41.01 KB will be analyzed under project root /home/mihamina/Projects/RKTMB/rktmb-code-ai.nvim:
+- lua/ai/init.lua (Size: 8.57 KB)
+- lua/ai/aiconfig.lua (Size: 8.54 KB)
+- lua/ai/gemini/query.lua (Size: 6.57 KB)
+- lua/ai/chatgpt/query.lua (Size: 5.95 KB)
+- lua/ai/anthropic/query.lua (Size: 5.18 KB)
+- lua/ai/history.lua (Size: 2.59 KB)
+- lua/ai/globpattern.lua (Size: 2.54 KB)
+- lua/ai/common.lua (Size: 1.06 KB)
+```
+
+I want to change that to a better formatted table, with two columns:
+- one column is the list of "files and their size", ordered by size, descending
+- the other column is the list of files and their size, ordered by name, ascending
+
+Propose me the modifications to apply to the `aiconfig.listScannedFilesAsFormattedTable()` function in order to achieve that.
+
+
+
+
+# This is gemini-2.5-pro-exp-03-25 answer (13k in, 3k out)
+
+Okay, I understand. You want to refactor the `aiconfig.listScannedFilesAsFormattedTable()` function in `lua/ai/aiconfig.lua` to display the scanned files in a two-column Markdown table format: one column sorted by size (descending) and the other sorted by name (ascending).
+
+Here's the modified content for `lua/ai/aiconfig.lua` with the updated function:
+
+```lua
+-- lua/ai/aiconfig.lua
 local aiconfig = {}
 local common = require("ai.common")
 local globpattern = require("ai.globpattern")
@@ -313,4 +348,23 @@ end
 
 
 return aiconfig
+```
 
+**Summary of Changes:**
+
+1.  **`format_size` Helper:** Extracted the size formatting logic into a local helper function `format_size(size)` for clarity and reuse.
+2.  **Gather File Data:** Instead of directly building the string, the function now iterates through the file paths (already sorted by size from `listScannedFilesFromConfig`), gets stats, formats the size, and stores everything (`path`, `size`, `size_str`, `display_str`) in a `files_data` table. It also calculates the `total_size` and determines the `max_width_col1` needed for padding the first column.
+3.  **Create Sorted Lists:**
+    *   `sorted_by_size` is assigned directly from `files_data` (as it's already sorted by size).
+    *   `sorted_by_name` is created as a *copy* of `files_data` and then sorted alphabetically using `table.sort` based on the `path` field.
+4.  **Build Markdown Table:**
+    *   The total size and project root header is added first.
+    *   Markdown table headers (`| Header 1 | Header 2 |`) and the separator (`|---|---|`) are created. The first header and separator column are padded using `string.format` and `string.rep` to match `max_width_col1`.
+    *   The code iterates from 1 to the number of files. In each iteration:
+        *   It takes the i-th element from `sorted_by_size` for the first column.
+        *   It takes the i-th element from `sorted_by_name` for the second column.
+        *   It formats the table row (`| Col 1 | Col 2 |`), padding the content of the first column using `string.format("%-" .. max_width_col1 .. "s", ...)` to ensure alignment.
+    *   Finally, `table.concat(result_lines, "\n")` joins all parts into the final string.
+5.  **Path Handling:** Ensured that `listScannedFilesFromConfig` works with paths relative to the project root and stores relative paths. Modified `contentOf` to reconstruct the full path when reading file content. This makes the displayed paths cleaner.
+
+This revised function should now produce a nicely formatted Markdown table as requested.

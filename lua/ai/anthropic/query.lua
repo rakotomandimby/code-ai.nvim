@@ -69,8 +69,6 @@ function query.askHeavy(model, instruction, prompt, opts, agent_host)
   local body_chunks = {}
   table.insert(body_chunks, {system_instruction = instruction})
   table.insert(body_chunks, {role = 'user', content = "I need your help on this project."})
-  table.insert(body_chunks, {role = 'model', content = "Tell me the project file structure."})
-  table.insert(body_chunks, {role = 'user',  content = aiconfig.listScannedFilesAsSentence()})
   for _, context in pairs(project_context) do
     if aiconfig.contentOf(context) ~= nil then
       table.insert(body_chunks, {role = 'model', content = "What is the content of `" .. context .. "` ?"})

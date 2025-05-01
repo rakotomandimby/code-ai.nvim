@@ -161,8 +161,7 @@ function M.handle(name, input)
   end
   local prompt = M.fill(def.prompt_tpl, args)
   -- Get system instructions from file or fall back to command definition
-  local system_instructions = aiconfig.getSystemInstructions()
-  local instruction = system_instructions ~= "" and system_instructions or M.fill(def.instruction_tpl, args)
+  local instruction = aiconfig.getSystemInstructions()
 
   -- Determine which models to use
   local anthropic_model = def.anthropic_model or M.opts.anthropic_model
@@ -202,9 +201,9 @@ function M.handle(name, input)
     callback = function() end
   }
 
-  if (number_of_files == 0  
-        or not use_anthropic_agent 
-        or not use_gemini_agent 
+  if (number_of_files == 0
+        or not use_anthropic_agent
+        or not use_gemini_agent
         or not use_chatgpt_agent) then
     common.log("Not using agents")
     anthropic.ask(

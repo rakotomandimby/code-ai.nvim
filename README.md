@@ -54,7 +54,7 @@ This is the configuration for the plugin:
         openai_model    = 'gpt-4o-mini',
 
         anthropic_api_key = 'YOUR_ANTHROPIC_API_KEY',      -- or read from env: `os.getenv('ANTHROPIC_API_KEY')`
-        googleai_api_key  = 'YOUR_GEMINI_API_KEY',         -- or read from env: `os.getenv('GEMINI_API_KEY')`
+        googleai_api_key  = 'YOUR_GOOGLEAI_API_KEY',       -- or read from env: `os.getenv('GEMINI_API_KEY')`
         openai_api_key    = 'YOUR_OPENAI_API_KEY',         -- or read from env: `os.getenv('OPENAI_API_KEY')`
 
         anthropic_agent_host = 'http://172.16.76.1:6000',    -- dont set if you dont want to use the agent

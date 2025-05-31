@@ -1,6 +1,6 @@
 local anthropic = require('ai.anthropic.query')
-local gemini = require('ai.gemini.query')
-local chatgpt = require('ai.chatgpt.query')
+local googleai = require('ai.googleai.query')
+local openai = require('ai.openai.query')
 local aiconfig = require('ai.aiconfig')
 local common = require('ai.common')
 
@@ -17,16 +17,16 @@ local default_prompts = {
 local M = {}
 M.opts = {
   anthropic_model = '',
-  gemini_model = '',
-  chatgpt_model = '',
+  googleai_model = '',
+  openai_model = '',
 
   anthropic_agent_host = '',
-  gemini_agent_host = '',
-  chatgpt_agent_host = '',
+  googleai_agent_host = '',
+  openai_agent_host = '',
 
   anthropic_api_key = '',
-  gemini_api_key = '',
-  chatgpt_api_key = '',
+  googleai_api_key = '',
+  openai_api_key = '',
 
   locale = 'en',
   alternate_locale = 'fr',
@@ -148,12 +148,12 @@ function M.handle(name, input)
 
   local number_of_files = #aiconfig.listScannedFilesFromConfig()
   local use_anthropic_agent = M.opts.anthropic_agent_host ~= ''
-  local use_gemini_agent = M.opts.gemini_agent_host ~= ''
-  local use_chatgpt_agent = M.opts.chatgpt_agent_host ~= ''
+  local use_googleai_agent = M.opts.googleai_agent_host ~= ''
+  local use_openai_agent = M.opts.openai_agent_host ~= ''
 
   local update = nil
 
-  if (number_of_files == 0 or not use_anthropic_agent or not use_gemini_agent or not use_chatgpt_agent ) then
+  if (number_of_files == 0 or not use_anthropic_agent or not use_googleai_agent or not use_openai_agent ) then
     update = M.createPopup(M.fill(def.loading_tpl , args), width - 8, height - 4)
   else
     local scanned_files = aiconfig.listScannedFilesAsFormattedTable()
@@ -165,24 +165,24 @@ function M.handle(name, input)
 
   -- Determine which models to use
   local anthropic_model = def.anthropic_model or M.opts.anthropic_model
-  local gemini_model = def.gemini_model or M.opts.gemini_model
-  local chatgpt_model = def.chatgpt_model or M.opts.chatgpt_model
+  local googleai_model = def.googleai_model or M.opts.googleai_model
+  local openai_model = def.openai_model or M.opts.openai_model
 
   -- If command-level models are set, use them
   if def.anthropic_model and def.anthropic_model ~= '' then
     anthropic_model = def.anthropic_model
   end
-  if def.gemini_model and def.gemini_model ~= '' then
-    gemini_model = def.gemini_model
+  if def.googleai_model and def.googleai_model ~= '' then
+    googleai_model = def.googleai_model
   end
-  if def.chatgpt_model and def.chatgpt_model ~= '' then
-    chatgpt_model = def.chatgpt_model
+  if def.openai_model and def.openai_model ~= '' then
+    openai_model = def.openai_model
   end
 
 
   local function handleResult(output, output_key)
     args[output_key] = output
-    args.output = (args.anthropic_output or '').. (args.gemini_output or '') .. (args.chatgpt_output or '')
+    args.output = (args.anthropic_output or '').. (args.googleai_output or '') .. (args.openai_output or '')
     update(M.fill(def.result_tpl or '${output}', args))
   end
 
@@ -191,20 +191,20 @@ function M.handle(name, input)
     callback = function() end
   }
 
-  local askHandleResultAndCallbackGemini = {
-    handleResult = function(output) return handleResult(output, 'gemini_output') end,
+  local askHandleResultAndCallbackGoogleAI = {
+    handleResult = function(output) return handleResult(output, 'googleai_output') end,
     callback = function() end
   }
 
-  local askHandleResultAndCallbackChatGPT = {
-    handleResult = function(output) return handleResult(output, 'chatgpt_output') end,
+  local askHandleResultAndCallbackOpenAI = {
+    handleResult = function(output) return handleResult(output, 'openai_output') end,
     callback = function() end
   }
 
   if (number_of_files == 0
         or not use_anthropic_agent
-        or not use_gemini_agent
-        or not use_chatgpt_agent) then
+        or not use_googleai_agent
+        or not use_openai_agent) then
     common.log("Not using agents")
     anthropic.ask(
       anthropic_model,
@@ -212,18 +212,18 @@ function M.handle(name, input)
       prompt,
       askHandleResultAndCallbackAnthropic,
       M.opts.anthropic_api_key)
-    gemini.ask(
-      gemini_model,
+    googleai.ask(
+      googleai_model,
       instruction,
       prompt,
-      askHandleResultAndCallbackGemini,
-      M.opts.gemini_api_key)
-    chatgpt.ask(
-      chatgpt_model,
+      askHandleResultAndCallbackGoogleAI,
+      M.opts.googleai_api_key)
+    openai.ask(
+      openai_model,
       instruction,
       prompt,
-      askHandleResultAndCallbackChatGPT,
-      M.opts.chatgpt_api_key)
+      askHandleResultAndCallbackOpenAI,
+      M.opts.openai_api_key)
   else
     common.log("Using agents")
     anthropic.askHeavy(
@@ -232,18 +232,18 @@ function M.handle(name, input)
       prompt,
       askHandleResultAndCallbackAnthropic,
       M.opts.anthropic_agent_host)
-    gemini.askHeavy(
-      gemini_model,
+    googleai.askHeavy(
+      googleai_model,
       instruction,
       prompt,
-      askHandleResultAndCallbackGemini,
-      M.opts.gemini_agent_host)
-    chatgpt.askHeavy(
-      chatgpt_model,
+      askHandleResultAndCallbackGoogleAI,
+      M.opts.googleai_agent_host)
+    openai.askHeavy(
+      openai_model,
       instruction,
       prompt,
-      askHandleResultAndCallbackChatGPT,
-      M.opts.chatgpt_agent_host)
+      askHandleResultAndCallbackOpenAI,
+      M.opts.openai_agent_host)
   end
 end
 
@@ -278,11 +278,11 @@ function M.setup(opts)
     end
   end
 
-  if M.opts.anthropic_model == '' or  M.opts.gemini_model == '' or M.opts.chatgpt_model == '' then
-    error('You need to set both anthropic_model and gemini_model and chatgpt_model')
+  if M.opts.anthropic_model == '' or  M.opts.googleai_model == '' or M.opts.openai_model == '' then
+    error('You need to set both anthropic_model and googleai_model and openai_model')
   end
-  if M.opts.anthropic_api_key ==''or M.opts.gemini_api_key == '' or M.opts.chatgpt_api_key == '' then
-    error('You need to set both anthropic_api_key and gemini_api_key and chatgpt_api_key')
+  if M.opts.anthropic_api_key ==''or M.opts.googleai_api_key == '' or M.opts.openai_api_key == '' then
+    error('You need to set both anthropic_api_key and googleai_api_key and openai_api_key')
   end
 
   vim.api.nvim_create_user_command('AIListScannedFiles', function()

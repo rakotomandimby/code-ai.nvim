@@ -8,7 +8,7 @@ local promptToSave = ""
 local modelUsed = ""
 
 function query.formatResult(data)
-  common.log("Inside ChatGPT formatResult")
+  common.log("Inside OpenAI formatResult")
   local prompt_tokens = data.usage.prompt_tokens or 0 -- Default to 0 for disabled model
   local completion_tokens = data.usage.completion_tokens or 0 -- Default to 0 for disabled model
 
@@ -18,13 +18,13 @@ function query.formatResult(data)
   -- Create the result string with token counts
   local result = '\n# This is '.. modelUsed .. ' answer (' .. formatted_prompt_tokens .. ' in, ' .. formatted_completion_tokens .. ' out)\n\n'
   result = result .. data.choices[1].message.content .. '\n\n'
-  history.saveToHistory('chatgpt_' .. modelUsed , promptToSave .. '\n\n' .. result)
+  history.saveToHistory('openai_' .. modelUsed , promptToSave .. '\n\n' .. result)
   return result
 end
 
--- Added a new function to handle and format ChatGPT API errors
+-- Added a new function to handle and format OpenAI API errors
 function query.formatError(status, body)
-  common.log("Formatting ChatGPT API error: " .. body)
+  common.log("Formatting OpenAI API error: " .. body)
   local error_result
   -- Try to parse the error JSON
   local success, error_data = pcall(vim.fn.json_decode, body)
@@ -35,7 +35,7 @@ function query.formatError(status, body)
     local error_code = error_data.error.code or ""
     local error_param = error_data.error.param or ""
     -- Build error message with all available details
-    error_result = string.format("# ChatGPT API Error (%s)\n\n**Error Type**: %s\n", status, error_type)
+    error_result = string.format("# OpenAI API Error (%s)\n\n**Error Type**: %s\n", status, error_type)
     if error_code ~= "" then
       error_result = error_result .. string.format("**Error Code**: %s\n", error_code)
     end
@@ -45,7 +45,7 @@ function query.formatError(status, body)
     error_result = error_result .. string.format("**Message**: %s\n", error_message)
   else
     -- Fallback for unexpected error format
-    error_result = string.format("# ChatGPT API Error (%s)\n\n```\n%s\n```", status, body)
+    error_result = string.format("# OpenAI API Error (%s)\n\n```\n%s\n```", status, body)
   end
   return error_result
 end
@@ -56,7 +56,7 @@ query.askCallback = function(res, opts)
 end
 
 local disabled_response = {
-  choices = { { message = { content = "ChatGPT models are disabled" } } },
+  choices = { { message = { content = "OpenAI models are disabled" } } },
   usage = { prompt_tokens = 0, completion_tokens = 0 }
 }
 
@@ -70,7 +70,7 @@ function query.askHeavy(model, instruction, prompt, opts, agent_host)
     return
   end
 
-  local url = agent_host .. '/chatgpt'
+  local url = agent_host .. '/openai'
   local project_context = aiconfig.listScannedFilesFromConfig()
   local body_chunks = {}
   table.insert(body_chunks, {system_instruction = instruction})
@@ -147,7 +147,7 @@ function query.ask(model, instruction, prompt, opts, api_key)
         }
       ),
       callback = function(res)
-        common.log("Before ChatGPT callback call")
+        common.log("Before OpenAI callback call")
         vim.schedule(function() query.askCallback(res, opts) end)
       end
     })

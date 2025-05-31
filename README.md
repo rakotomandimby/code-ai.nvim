@@ -6,7 +6,7 @@ Thank you Gerald for your work.
 
 # code-ai.nvim
 
-A Neovim plugin powered by Google Gemini and ChatGPT.
+A Neovim plugin powered by GoogleAI Gemini, OpenAI ChatGPT and Anthropic Claude to help you write code.
 
 Here is a demo without using the agents:
 
@@ -34,55 +34,62 @@ You can find the agent in the repository [code-ai-agent](https://github.com/rako
 
 ## Installation
 
-First get API keys from [Google Cloud](https://ai.google.dev/gemini-api/docs/api-key) and [ChatGPT](https://platform.openai.com/api-keys) and set them in your environment:
+First get API keys from 
+- [Google Cloud](https://ai.google.dev/gemini-api/docs/api-key) 
+- [ChatGPT](https://platform.openai.com/api-keys)
+- [Anthropic](https://console.anthropic.com/settings/keys)
 
-For usage **WITHOUT** the agents, **don't set** the `gemini_agent_host` and `chatgpt_agent_host`.
-For usage **WITH** the agents, **set** the `gemini_agent_host` and `chatgpt_agent_host`.
+For usage **WITHOUT** the agents, **don't set** the `googleai_agent_host` nor `openai_agent_host` nor `anthropic_agent_host`.
+For usage **WITH** the agents, **set** the `googleai_agent_host` and `openai_agent_host` and `anthropic_agent_host` to the URLs of the agents.
 
 This is the configuration for the plugin:
 
 ```lua
 {
-  'rakotomandimby/code-ai.nvim',
-  dependencies = 'nvim-lua/plenary.nvim',
-  opts = {
-    anthropic_model='claude-3-7-sonnet-latest',
-    gemini_model='gemini-2.0-flash-exp',
-    chatgpt_model='gpt-4o-mini',
+    'rakotomandimby/code-ai.nvim',
+    dependencies = 'nvim-lua/plenary.nvim',
+    opts = {
+        anthropic_model = 'claude-3-7-sonnet-latest',
+        googeai_model   = 'gemini-2.0-flash-exp',
+        openai_model    = 'gpt-4o-mini',
 
-    anthropic_api_key = 'YOUR_ANTHROPIC_API_KEY',   -- or read from env: `os.getenv('ANTHROPIC_API_KEY')`
-    gemini_api_key = 'YOUR_GEMINI_API_KEY',         -- or read from env: `os.getenv('GEMINI_API_KEY')`
-    chatgpt_api_key = 'YOUR_CHATGPT_API_KEY',       -- or read from env: `os.getenv('CHATGPT_API_KEY')`
+        anthropic_api_key = 'YOUR_ANTHROPIC_API_KEY',      -- or read from env: `os.getenv('ANTHROPIC_API_KEY')`
+        googleai_api_key  = 'YOUR_GEMINI_API_KEY',         -- or read from env: `os.getenv('GEMINI_API_KEY')`
+        openai_api_key    = 'YOUR_OPENAI_API_KEY',         -- or read from env: `os.getenv('OPENAI_API_KEY')`
 
-    anthropic_agent_host='http://172.16.76.1:6000', -- dont set if you dont want to use the agent
-                                                    -- if you set, make sure the agents are running
-    gemini_agent_host='http://172.16.76.1:5000',    -- dont set if you dont want to use the agent
-                                                    -- if you set, make sure the agents are running
-    chatgpt_agent_host='http://172.16.76.1:4000',   -- dont set if you dont want to use the agent
-                                                    -- if you set, make sure the agents are running
-    result_popup_gets_focus = true,
-    -- Define custom prompts here, see below for more details
-    locale = 'en',
-    prompts = {
-        javascript_vanilla = {
-            command = 'AIJavascriptVanilla',
-            instruction_tpl = 'Act as a Vanilla Javascript developer. Format you answer with Markdown.',
-            prompt_tpl = '${input}',
-            result_tpl = '${output}',
-            loading_tpl = 'Loading...',
-            require_input = true,
-        },
-        php_bare = {
-            command = 'AIPhpBare',
-            instruction_tpl = 'Act as a PHP developer. Format you answer with Markdown.',
-            prompt_tpl = '${input}',
-            result_tpl = '${output}',
-            loading_tpl = 'Loading...',
-            require_input = true,
+        anthropic_agent_host = 'http://172.16.76.1:6000',    -- dont set if you dont want to use the agent
+                                                             -- if you set, make sure the agents are running
+        googleai_agent_host  = 'http://172.16.76.1:5000',    -- dont set if you dont want to use the agent
+                                                             -- if you set, make sure the agents are running
+        openai_agent_host    = 'http://172.16.76.1:4000',    -- dont set if you dont want to use the agent
+                                                             -- if you set, make sure the agents are running
+        result_popup_gets_focus = true,
+        -- Define custom prompts here, see below for more details
+        locale = 'en',
+        prompts = {
+            javascript_vanilla = {
+                command = 'AIJavascriptVanilla',
+                prompt_tpl = '${input}',
+                result_tpl = '${output}',
+                loading_tpl = 'Loading...',
+                require_input = true,
+                anthropic_model='claude-3-7-sonnet-latest',
+                googleai_model='gemini-2.0-flash-exp',
+                openai_model='gpt-4o-mini',
+            },
+            php_bare = {
+                command = 'AIPhpBare',
+                prompt_tpl = '${input}',
+                result_tpl = '${output}',
+                loading_tpl = 'Loading...',
+                require_input = true,
+                anthropic_model='claude-3-7-sonnet-latest',
+                googleai_model='gemini-2.0-flash-exp',
+                openai_model='gpt-4o-mini',
+            },
         },
     },
-  },
-  event = 'VimEnter',
+    event = 'VimEnter',
 },
 ```
 
@@ -97,20 +104,22 @@ If you ave configured the plugin following the instructions above, you can use t
 
 The prompts will be merged into built-in prompts. Here are the available fields for each prompt:
 
-| Fields            | Required | Description                                                                                      |
-| ---------------   | -------- | ------------------------------------------------------------------------------------------------ |
-| `gemini_model`    | Yes      | The model to use for the Gemini API.                                                             |
-| `chatgpt_model`   | Yes      | The model to use for the ChatGPT API.                                                            |
-| `gemini_api_key`  | Yes      | The API key for the Gemini API.                                                                  |
-| `chatgpt_api_key` | Yes      | The API key for the ChatGPT API.                                                                 |
-| `gemini_agent_host`  | No     | The host of the Gemini agent.                                                                   |
-| `chatgpt_agent_host` | No     | The host of the ChatGPT agent.                                                                  |
-| `command`         | No       | A user command will be created for this prompt.                                                  |
-| `instruction_tpl` | Yes      | Template for the instruction given to the model                                                  |                         
-| `loading_tpl`     | No       | Template for content shown when communicating with Gemini. See below for available placeholders. |
-| `prompt_tpl`      | Yes      | Template for the prompt string passed to Gemini. See below for available placeholders.           |
-| `result_tpl`      | No       | Template for the result shown in the popup. See below for available placeholders.                |
-| `require_input`   | No       | If set to `true`, the prompt will only be sent if text is selected or passed to the command.     |
+| Fields                 | Required | Description                                                                                      |
+| ---------------------- | -------- | ------------------------------------------------------------------------------------------------ |
+| `googleai_model`       | Yes      | The model to use for the GoogleAI Gemini API.                                                    |
+| `openai_model`         | Yes      | The model to use for the OpenAI ChatGPT API.                                                     |
+| `anthropic_model`      | Yes      | The model to use for the Anthropic Claude API.                                                   |
+| `googleai_api_key`     | Yes      | The API key for the GoogleAI Gemini API.                                                         |
+| `openai_api_key`       | Yes      | The API key for the OpenAI ChatGPT API.                                                          |
+| `anthropic_api_key`    | Yes      | The API key for the Anthropic Claude API.                                                        |
+| `googleai_agent_host`  | No       | The host of the GoogleAI Gemini agent.                                                           |
+| `openai_agent_host`    | No       | The host of the OpenAI ChatGPT agent.                                                            |
+| `anthropic_agent_host` | No       | The host of the Anthropic Claude agent.                                                          |
+| `command`              | No       | A user command will be created for this prompt.                                                  |
+| `loading_tpl`          | No       | Template for content shown when communicating with Gemini. See below for available placeholders. |
+| `prompt_tpl`           | Yes      | Template for the prompt string passed to Gemini. See below for available placeholders.           |
+| `result_tpl`           | No       | Template for the result shown in the popup. See below for available placeholders.                |
+| `require_input`        | No       | If set to `true`, the prompt will only be sent if text is selected or passed to the command.     |
 
 Placeholders can be used in templates. If not available, it will be left as is.
 

@@ -8,12 +8,12 @@ local promptToSave = ""
 local modelUsed = ""
 
 function query.formatResult(data)
-  common.log("Inside Gemini formatResult")
+  common.log("Inside GoogleAI formatResult")
   local result = ''
   local candidates_number = #data['candidates']
   if candidates_number == 1 then
     if data['candidates'][1]['content'] == nil then
-      result = '\n#Gemini error\n\nGemini stopped with the reason: ' .. data['candidates'][1]['finishReason'] .. '\n'
+      result = '\n#GoogleAI error\n\nGoogleAI stopped with the reason: ' .. data['candidates'][1]['finishReason'] .. '\n'
       return result
     else
       -- Extract token counts from the response
@@ -28,19 +28,19 @@ function query.formatResult(data)
       result = result .. data['candidates'][1]['content']['parts'][1]['text'] .. '\n'
     end
   else
-    result = '# There are ' .. candidates_number .. ' Gemini candidates\n'
+    result = '# There are ' .. candidates_number .. ' GoogleAI candidates\n'
     for i = 1, candidates_number do
-      result = result .. '## Gemini Candidate number ' .. i .. '\n'
+      result = result .. '## GoogleAI Candidate number ' .. i .. '\n'
       result = result .. data['candidates'][i]['content']['parts'][1]['text'] .. '\n'
     end
   end
-  history.saveToHistory('gemini_' .. modelUsed  , promptToSave .. '\n\n' .. result)
+  history.saveToHistory('googleai_' .. modelUsed  , promptToSave .. '\n\n' .. result)
   return result
 end
 
--- Added a new function to handle and format Gemini API errors
+-- Added a new function to handle and format GoogleAI API errors
 function query.formatError(status, body)
-  common.log("Formatting Gemini API error: " .. body)
+  common.log("Formatting GoogleAI API error: " .. body)
   local error_result
   -- Try to parse the error JSON
   local success, error_data = pcall(vim.fn.json_decode, body)
@@ -50,7 +50,7 @@ function query.formatError(status, body)
     local error_message = error_data.error.message or "Unknown error occurred"
     local error_status = error_data.error.status or "ERROR"
     error_result = string.format(
-      "# Gemini API Error (%s)\n\n**Error Code**: %s\n**Status**: %s\n**Message**: %s\n",
+      "# GoogleAI API Error (%s)\n\n**Error Code**: %s\n**Status**: %s\n**Message**: %s\n",
       status,
       error_code,
       error_status,
@@ -58,7 +58,7 @@ function query.formatError(status, body)
     )
   else
     -- Fallback for unexpected error format
-    error_result = string.format("# Gemini API Error (%s)\n\n```\n%s\n```", status, body)
+    error_result = string.format("# GoogleAI API Error (%s)\n\n```\n%s\n```", status, body)
   end
   return error_result
 end
@@ -69,7 +69,7 @@ query.askCallback = function(res, opts)
 end
 
 local disabled_response = {
-  candidates = { { content = { parts = { { text = "Gemini models are disabled" } } }, finishReason = "STOP" } },
+  candidates = { { content = { parts = { { text = "GoogleAI models are disabled" } } }, finishReason = "STOP" } },
   usageMetadata = { promptTokenCount = 0, candidatesTokenCount = 0 }
 }
 
@@ -83,7 +83,7 @@ function query.askHeavy(model, instruction, prompt, opts, agent_host)
     return
   end
 
-  local url = agent_host .. '/gemini'
+  local url = agent_host .. '/googleai'
   local project_context = aiconfig.listScannedFilesFromConfig()
   local body_chunks = {}
   table.insert(body_chunks, {system_instruction = instruction})
@@ -163,7 +163,7 @@ function query.ask(model, instruction, prompt, opts, api_key)
           }
         }),
       callback = function(res)
-        common.log("Before gemini callback call")
+        -- common.log("Before GoogleAI callback call")
         vim.schedule(function() query.askCallback(res, opts) end)
       end
     })

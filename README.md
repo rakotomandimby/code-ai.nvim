@@ -40,6 +40,7 @@ First get API keys from
 - [Anthropic](https://console.anthropic.com/settings/keys)
 
 For usage **WITHOUT** the agents, **don't set** the `googleai_agent_host` nor `openai_agent_host` nor `anthropic_agent_host`.
+
 For usage **WITH** the agents, **set** the `googleai_agent_host` and `openai_agent_host` and `anthropic_agent_host` to the URLs of the agents.
 
 This is the configuration for the plugin:
@@ -54,7 +55,7 @@ This is the configuration for the plugin:
         openai_model    = 'gpt-4o-mini',
 
         anthropic_api_key = 'YOUR_ANTHROPIC_API_KEY',      -- or read from env: `os.getenv('ANTHROPIC_API_KEY')`
-        googleai_api_key  = 'YOUR_GOOGLEAI_API_KEY',       -- or read from env: `os.getenv('GEMINI_API_KEY')`
+        googleai_api_key  = 'YOUR_GOOGLEAI_API_KEY',       -- or read from env: `os.getenv('GOOGLEAI_API_KEY')`
         openai_api_key    = 'YOUR_OPENAI_API_KEY',         -- or read from env: `os.getenv('OPENAI_API_KEY')`
 
         anthropic_agent_host = 'http://172.16.76.1:6000',    -- dont set if you dont want to use the agent
@@ -106,16 +107,16 @@ The prompts will be merged into built-in prompts. Here are the available fields 
 
 | Fields                 | Required | Description                                                                                      |
 | ---------------------- | -------- | ------------------------------------------------------------------------------------------------ |
-| `googleai_model`       | Yes      | The model to use for the GoogleAI Gemini API.                                                    |
-| `openai_model`         | Yes      | The model to use for the OpenAI ChatGPT API.                                                     |
-| `anthropic_model`      | Yes      | The model to use for the Anthropic Claude API.                                                   |
+| `googleai_model`       | Yes      | The model to use for the GoogleAI Gemini API. Set it to 'disabled' if you don't want to use it.  |
+| `openai_model`         | Yes      | The model to use for the OpenAI ChatGPT API. Set it to 'disabled' if you don't want to use it.   |
+| `anthropic_model`      | Yes      | The model to use for the Anthropic Claude API. Set it to 'disabled' if you don't want to use it. |
 | `googleai_api_key`     | Yes      | The API key for the GoogleAI Gemini API.                                                         |
 | `openai_api_key`       | Yes      | The API key for the OpenAI ChatGPT API.                                                          |
 | `anthropic_api_key`    | Yes      | The API key for the Anthropic Claude API.                                                        |
 | `googleai_agent_host`  | No       | The host of the GoogleAI Gemini agent.                                                           |
 | `openai_agent_host`    | No       | The host of the OpenAI ChatGPT agent.                                                            |
 | `anthropic_agent_host` | No       | The host of the Anthropic Claude agent.                                                          |
-| `command`              | No       | A user command will be created for this prompt.                                                  |
+| `command`              | Yes      | A user command will be created for this prompt.                                                  |
 | `loading_tpl`          | No       | Template for content shown when communicating with Gemini. See below for available placeholders. |
 | `prompt_tpl`           | Yes      | Template for the prompt string passed to Gemini. See below for available placeholders.           |
 | `result_tpl`           | No       | Template for the result shown in the popup. See below for available placeholders.                |
@@ -127,6 +128,6 @@ Placeholders can be used in templates. If not available, it will be left as is.
 | --------------------- | ------------------------------------------------------------------------------------------ | ----------------- |
 | `${locale}`           | `opts.locale`                                                                              | Always            |
 | `${input}`            | The text selected or passed to the command.                                                | Always            |
-| `${output}`           | The result returned by Gemini.                                                             | After the request |
+| `${output}`           | The result returned by the model.                                                          | After the request |
 
 

@@ -206,19 +206,19 @@ function M.handle(name, input)
         or not use_googleai_agent
         or not use_openai_agent) then
     common.log("Not using agents")
-    anthropic.ask(
+    anthropic.askLight(
       anthropic_model,
       instruction,
       prompt,
       askHandleResultAndCallbackAnthropic,
       M.opts.anthropic_api_key)
-    googleai.ask(
+    googleai.askLight(
       googleai_model,
       instruction,
       prompt,
       askHandleResultAndCallbackGoogleAI,
       M.opts.googleai_api_key)
-    openai.ask(
+    openai.askLight(
       openai_model,
       instruction,
       prompt,

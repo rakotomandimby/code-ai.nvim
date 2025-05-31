@@ -107,7 +107,7 @@ function query.askHeavy(model, instruction, prompt, opts, agent_host)
 end
 
 
-function query.ask(model, instruction, prompt, opts, api_key)
+function query.askLight(model, instruction, prompt, opts, api_key)
   promptToSave = prompt
   modelUsed = model
 

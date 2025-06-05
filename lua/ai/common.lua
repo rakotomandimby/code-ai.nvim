@@ -24,7 +24,7 @@ function common.uploadContent(url, token, content, model_name)
 
   local headers = {
     ['Content-Type'] = 'text/markdown',
-    ['X-MarkdownBlog-Token'] = token
+    ['X-MardkdownBlog-Token'] = token
   }
 
   curl.put(url,

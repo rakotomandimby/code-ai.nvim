@@ -7,7 +7,8 @@ local history = require('ai.history')
 local promptToSave = ""
 local modelUsed = ""
 
-function query.formatResult(data)
+-- Modified: Added upload_url and upload_token parameters
+function query.formatResult(data, upload_url, upload_token)
   common.log("Inside OpenAI formatResult")
   local prompt_tokens = data.usage.prompt_tokens or 0 -- Default to 0 for disabled model
   local completion_tokens = data.usage.completion_tokens or 0 -- Default to 0 for disabled model
@@ -19,6 +20,11 @@ function query.formatResult(data)
   local result = '\n# This is '.. modelUsed .. ' answer (' .. formatted_prompt_tokens .. ' in, ' .. formatted_completion_tokens .. ' out)\n\n'
   result = result .. data.choices[1].message.content .. '\n\n'
   history.saveToHistory('openai_' .. modelUsed , promptToSave .. '\n\n' .. result)
+
+  -- START: Upload the formatted result
+  common.uploadContent(upload_url, upload_token, result, 'OpenAI (' .. modelUsed .. ')')
+  -- END: Upload the formatted result
+
   return result
 end
 
@@ -52,7 +58,8 @@ end
 
 query.askCallback = function(res, opts)
   local handleError = query.formatError  -- Set our custom error handler
-  common.askCallback(res, {handleResult = opts.handleResult, handleError = handleError, callback = opts.callback}, query.formatResult)
+  -- Modified: Pass upload_url and upload_token from opts to common.askCallback
+  common.askCallback(res, {handleResult = opts.handleResult, handleError = handleError, callback = opts.callback, upload_url = opts.upload_url, upload_token = opts.upload_token}, query.formatResult)
 end
 
 local disabled_response = {
@@ -60,13 +67,15 @@ local disabled_response = {
   usage = { prompt_tokens = 0, completion_tokens = 0 }
 }
 
-function query.askHeavy(model, instruction, prompt, opts, agent_host)
+-- Modified: Added upload_url and upload_token parameters
+function query.askHeavy(model, instruction, prompt, opts, agent_host, upload_url, upload_token)
   promptToSave = prompt
   modelUsed = model
 
   -- Check if model is disabled
   if model == "disabled" then
-    vim.schedule(function() query.askCallback({ status = 200, body = vim.json.encode(disabled_response) }, opts) end)
+    -- Modified: Pass upload_url and upload_token to askCallback
+    vim.schedule(function() query.askCallback({ status = 200, body = vim.json.encode(disabled_response) }, {handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token}) end)
     return
   end
 
@@ -102,7 +111,8 @@ function query.askHeavy(model, instruction, prompt, opts, agent_host)
         body = body,
         callback = function(res)
           if i == #body_chunks then
-            vim.schedule(function() query.askCallback(res, opts) end)
+            -- Modified: Pass upload_url and upload_token to askCallback
+            vim.schedule(function() query.askCallback(res, {handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token}) end)
           else
             sendNextRequest(i + 1)
           end
@@ -112,13 +122,14 @@ function query.askHeavy(model, instruction, prompt, opts, agent_host)
   sendNextRequest(1)
 end
 
-function query.askLight(model, instruction, prompt, opts, api_key)
+-- Modified: Added upload_url and upload_token parameters
+function query.askLight(model, instruction, prompt, opts, api_key, upload_url, upload_token)
   promptToSave = prompt
   modelUsed = model
 
-  -- Check if model is disabled
   if model == "disabled" then
-    vim.schedule(function() query.askCallback({ status = 200, body = vim.json.encode(disabled_response) }, opts) end)
+    -- Modified: Pass upload_url and upload_token to askCallback
+    vim.schedule(function() query.askCallback({ status = 200, body = vim.json.encode(disabled_response) }, {handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token}) end)
     return
   end
 
@@ -148,10 +159,12 @@ function query.askLight(model, instruction, prompt, opts, api_key)
       ),
       callback = function(res)
         common.log("Before OpenAI callback call")
-        vim.schedule(function() query.askCallback(res, opts) end)
+        -- Modified: Pass upload_url and upload_token to askCallback
+        vim.schedule(function() query.askCallback(res, {handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token}) end)
       end
     })
 end
 
 return query
+
 

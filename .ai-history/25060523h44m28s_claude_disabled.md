@@ -15,3 +15,10 @@ I do not want to LLMs responses to be modified merged, I want them to be uploade
 
 Tell me the modifications I need to make to the code to implement this feature.
 
+
+
+
+# This is disabled answer (0k in, 0k out)
+
+Anthropic models are disabled
+

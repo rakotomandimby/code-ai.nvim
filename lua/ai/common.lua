@@ -21,6 +21,8 @@ function common.uploadContent(url, token, content, model_name)
   end
 
   common.log("Attempting to upload " .. model_name .. " response to: " .. url)
+  common.log(content)
+  common.log("====================================================")
 
   local headers = {
     ['Content-Type'] = 'text/markdown',

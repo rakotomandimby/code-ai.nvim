@@ -26,7 +26,7 @@ function query.formatResult(data, upload_url, upload_token)
       local formatted_prompt_tokens = string.format("%gk", math.floor(prompt_tokens / 1000))
       local formatted_answer_tokens = string.format("%gk", math.floor(answer_tokens / 1000))
 
-      result = '\n# This is ' .. modelUsed .. ' answer (' .. formatted_prompt_tokens .. ' in, ' .. formatted_answer_tokens .. ' out)\n\n'
+      result = '# This is ' .. modelUsed .. ' answer (' .. formatted_prompt_tokens .. ' in, ' .. formatted_answer_tokens .. ' out)\n\n'
       result = result .. data['candidates'][1]['content']['parts'][1]['text'] .. '\n'
     end
   else

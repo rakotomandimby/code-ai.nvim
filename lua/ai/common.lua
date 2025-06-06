@@ -1,4 +1,5 @@
 local common = {}
+local curl = require('plenary.curl') -- Added curl dependency for upload
 
 function common.log(message)
   local log_file = io.open("/tmp/aiconfig.log", "a")
@@ -12,6 +13,37 @@ function common.log(message)
   log_file:close()
 end
 
+-- START: New function to upload content
+function common.uploadContent(url, token, content, model_name)
+  if url == '' or token == '' then
+    common.log("Upload URL or Token not configured. Skipping upload for " .. model_name .. " response.")
+    return
+  end
+
+  common.log("Attempting to upload " .. model_name .. " response to: " .. url)
+  common.log(content)
+  common.log("====================================================")
+
+  local headers = {
+    ['Content-Type'] = 'text/markdown',
+    ['X-MarkdownBlog-Token'] = token
+  }
+
+  curl.put(url,
+    {
+      headers = headers,
+      body = content,
+      callback = function(res)
+        if res.status >= 200 and res.status < 300 then
+          common.log("Successfully uploaded " .. model_name .. " response. Status: " .. res.status)
+        else
+          common.log("Failed to upload " .. model_name .. " response. Status: " .. res.status .. ", Body: " .. res.body)
+        end
+      end
+    })
+end
+-- END: New function to upload content
+
 
 function common.askCallback(res, opts, formatResult)
   local result
@@ -24,7 +56,8 @@ function common.askCallback(res, opts, formatResult)
     end
   else
     local data = vim.fn.json_decode(res.body)
-    result = formatResult(data) -- Call the provided formatting function
+    -- Pass upload_url and upload_token to formatResult
+    result = formatResult(data, opts.upload_url, opts.upload_token) -- Modified: Pass upload options
     if opts.handleResult ~= nil then
       result = opts.handleResult(result)
     end
@@ -32,3 +65,5 @@ function common.askCallback(res, opts, formatResult)
   opts.callback(result)
 end
 return common
+
+

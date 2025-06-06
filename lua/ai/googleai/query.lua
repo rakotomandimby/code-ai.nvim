@@ -7,8 +7,8 @@ local history = require('ai.history')
 local promptToSave = ""
 local modelUsed = ""
 
--- Modified: Added upload_url and upload_token parameters
-function query.formatResult(data, upload_url, upload_token)
+-- Modified: Added upload_url, upload_token, and upload_as_public parameters
+function query.formatResult(data, upload_url, upload_token, upload_as_public)
   common.log("Inside GoogleAI formatResult")
   local result = ''
   local candidates_number = #data['candidates']
@@ -38,9 +38,9 @@ function query.formatResult(data, upload_url, upload_token)
   end
   history.saveToHistory('googleai_' .. modelUsed  , promptToSave .. '\n\n' .. result)
 
-  -- START: Upload the formatted result
-  common.uploadContent(upload_url, upload_token, result, 'GoogleAI (' .. modelUsed .. ')')
-  -- END: Upload the formatted result
+  -- START: Upload the formatted result with public option
+  common.uploadContent(upload_url, upload_token, result, 'GoogleAI (' .. modelUsed .. ')', upload_as_public)
+  -- END: Upload the formatted result with public option
 
   return result
 end
@@ -72,8 +72,8 @@ end
 
 query.askCallback = function(res, opts)
     local handleError = query.formatError  -- Set our custom error handler
-    -- Modified: Pass upload_url and upload_token from opts to common.askCallback
-    common.askCallback(res, {handleResult = opts.handleResult, handleError = handleError, callback = opts.callback, upload_url = opts.upload_url, upload_token = opts.upload_token}, query.formatResult)
+    -- Modified: Pass upload_url, upload_token, and upload_as_public from opts to common.askCallback
+    common.askCallback(res, {handleResult = opts.handleResult, handleError = handleError, callback = opts.callback, upload_url = opts.upload_url, upload_token = opts.upload_token, upload_as_public = opts.upload_as_public}, query.formatResult)
 end
 
 local disabled_response = {
@@ -81,15 +81,15 @@ local disabled_response = {
   usageMetadata = { promptTokenCount = 0, candidatesTokenCount = 0 }
 }
 
--- Modified: Added upload_url and upload_token parameters
-function query.askHeavy(model, instruction, prompt, opts, agent_host, upload_url, upload_token)
+-- Modified: Added upload_url, upload_token, and upload_as_public parameters
+function query.askHeavy(model, instruction, prompt, opts, agent_host, upload_url, upload_token, upload_as_public)
   promptToSave = prompt
   modelUsed = model
 
   -- Check if model is disabled
   if model == "disabled" then
-    -- Modified: Pass upload_url and upload_token to askCallback
-    vim.schedule(function() query.askCallback({ status = 200, body = vim.json.encode(disabled_response) }, {handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token}) end)
+    -- Modified: Pass upload_url, upload_token, and upload_as_public to askCallback
+    vim.schedule(function() query.askCallback({ status = 200, body = vim.json.encode(disabled_response) }, {handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token, upload_as_public = upload_as_public}) end)
     return
   end
 
@@ -125,8 +125,8 @@ function query.askHeavy(model, instruction, prompt, opts, agent_host, upload_url
         body = body,
         callback = function(res)
           if i == #body_chunks then
-            -- Modified: Pass upload_url and upload_token to askCallback
-            vim.schedule(function() query.askCallback(res, {handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token}) end)
+            -- Modified: Pass upload_url, upload_token, and upload_as_public to askCallback
+            vim.schedule(function() query.askCallback(res, {handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token, upload_as_public = upload_as_public}) end)
           else
             sendNextRequest(i + 1)
           end
@@ -136,14 +136,14 @@ function query.askHeavy(model, instruction, prompt, opts, agent_host, upload_url
   sendNextRequest(1)
 end
 
--- Modified: Added upload_url and upload_token parameters
-function query.askLight(model, instruction, prompt, opts, api_key, upload_url, upload_token)
+-- Modified: Added upload_url, upload_token, and upload_as_public parameters
+function query.askLight(model, instruction, prompt, opts, api_key, upload_url, upload_token, upload_as_public)
   promptToSave = prompt
   modelUsed = model
 
   if model == "disabled" then
-    -- Modified: Pass upload_url and upload_token to askCallback
-    vim.schedule(function() query.askCallback({ status = 200, body = vim.json.encode(disabled_response) }, {handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token}) end)
+    -- Modified: Pass upload_url, upload_token, and upload_as_public to askCallback
+    vim.schedule(function() query.askCallback({ status = 200, body = vim.json.encode(disabled_response) }, {handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token, upload_as_public = upload_as_public}) end)
     return
   end
 
@@ -177,8 +177,8 @@ function query.askLight(model, instruction, prompt, opts, api_key, upload_url, u
         }),
       callback = function(res)
         -- common.log("Before GoogleAI callback call")
-        -- Modified: Pass upload_url and upload_token to askCallback
-        vim.schedule(function() query.askCallback(res, {handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token}) end)
+        -- Modified: Pass upload_url, upload_token, and upload_as_public to askCallback
+        vim.schedule(function() query.askCallback(res, {handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token, upload_as_public = upload_as_public}) end)
       end
     })
 end

@@ -34,6 +34,7 @@ M.opts = {
   -- START: Added new configuration options for upload feature
   upload_url = '',
   upload_token = '',
+  upload_as_public = false, -- New configuration option with default value false
   -- END: Added new configuration options for upload feature
 }
 M.prompts = default_prompts
@@ -187,6 +188,7 @@ function M.handle(name, input)
   local common_query_opts = {
     upload_url = M.opts.upload_url,
     upload_token = M.opts.upload_token,
+    upload_as_public = M.opts.upload_as_public, -- Pass the new configuration option
   }
   -- END: Prepare common options for all LLM queries
 
@@ -201,6 +203,7 @@ function M.handle(name, input)
     callback = function() end,
     upload_url = common_query_opts.upload_url,
     upload_token = common_query_opts.upload_token,
+    upload_as_public = common_query_opts.upload_as_public, -- Pass the new configuration option
   }
 
   local askHandleResultAndCallbackGoogleAI = {
@@ -208,6 +211,7 @@ function M.handle(name, input)
     callback = function() end,
     upload_url = common_query_opts.upload_url,
     upload_token = common_query_opts.upload_token,
+    upload_as_public = common_query_opts.upload_as_public, -- Pass the new configuration option
   }
 
   local askHandleResultAndCallbackOpenAI = {
@@ -215,6 +219,7 @@ function M.handle(name, input)
     callback = function() end,
     upload_url = common_query_opts.upload_url,
     upload_token = common_query_opts.upload_token,
+    upload_as_public = common_query_opts.upload_as_public, -- Pass the new configuration option
   }
 
   if (number_of_files == 0
@@ -229,7 +234,8 @@ function M.handle(name, input)
       askHandleResultAndCallbackAnthropic,
       M.opts.anthropic_api_key,
       common_query_opts.upload_url,
-      common_query_opts.upload_token
+      common_query_opts.upload_token,
+      common_query_opts.upload_as_public -- Pass the new configuration option
     )
     googleai.askLight(
       googleai_model,
@@ -238,7 +244,8 @@ function M.handle(name, input)
       askHandleResultAndCallbackGoogleAI,
       M.opts.googleai_api_key,
       common_query_opts.upload_url,
-      common_query_opts.upload_token
+      common_query_opts.upload_token,
+      common_query_opts.upload_as_public -- Pass the new configuration option
     )
     openai.askLight(
       openai_model,
@@ -247,7 +254,8 @@ function M.handle(name, input)
       askHandleResultAndCallbackOpenAI,
       M.opts.openai_api_key,
       common_query_opts.upload_url,
-      common_query_opts.upload_token
+      common_query_opts.upload_token,
+      common_query_opts.upload_as_public -- Pass the new configuration option
     )
   else
     common.log("Using agents")
@@ -258,7 +266,8 @@ function M.handle(name, input)
       askHandleResultAndCallbackAnthropic,
       M.opts.anthropic_agent_host,
       common_query_opts.upload_url,
-      common_query_opts.upload_token
+      common_query_opts.upload_token,
+      common_query_opts.upload_as_public -- Pass the new configuration option
     )
     googleai.askHeavy(
       googleai_model,
@@ -267,7 +276,8 @@ function M.handle(name, input)
       askHandleResultAndCallbackGoogleAI,
       M.opts.googleai_agent_host,
       common_query_opts.upload_url,
-      common_query_opts.upload_token
+      common_query_opts.upload_token,
+      common_query_opts.upload_as_public -- Pass the new configuration option
     )
     openai.askHeavy(
       openai_model,
@@ -276,7 +286,8 @@ function M.handle(name, input)
       askHandleResultAndCallbackOpenAI,
       M.opts.openai_agent_host,
       common_query_opts.upload_url,
-      common_query_opts.upload_token
+      common_query_opts.upload_token,
+      common_query_opts.upload_as_public -- Pass the new configuration option
     )
   end
 end
@@ -341,5 +352,4 @@ vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
 })
 
 return M
-
 

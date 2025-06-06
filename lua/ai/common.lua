@@ -29,18 +29,25 @@ function common.uploadContent(url, token, content, model_name)
     ['X-MarkdownBlog-Token'] = token
   }
 
-  curl.put(url,
-    {
-      headers = headers,
-      body = content,
-      callback = function(res)
-        if res.status >= 200 and res.status < 300 then
-          common.log("Successfully uploaded " .. model_name .. " response. Status: " .. res.status)
-        else
-          common.log("Failed to upload " .. model_name .. " response. Status: " .. res.status .. ", Body: " .. res.body)
+  -- if model_name is not the string "disabled", then upload the content
+  if model_name ~= 'disabled' then
+    common.log("Uploading content for model: " .. model_name)
+    curl.put(url,
+      {
+        headers = headers,
+        body = content,
+        callback = function(res)
+          if res.status >= 200 and res.status < 300 then
+            common.log("Successfully uploaded " .. model_name .. " response. Status: " .. res.status)
+          else
+            common.log("Failed to upload " .. model_name .. " response. Status: " .. res.status .. ", Body: " .. res.body)
+          end
         end
-      end
-    })
+      })
+  else
+    common.log("Model is disabled. Skipping upload.")
+    return
+  end
 end
 -- END: New function to upload content
 

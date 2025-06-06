@@ -199,28 +199,22 @@ function M.handle(name, input)
   local askHandleResultAndCallbackAnthropic = {
     handleResult = function(output) return handleResult(output, 'anthropic_output') end,
     callback = function() end,
-    -- START: Pass upload options to individual LLM callbacks
     upload_url = common_query_opts.upload_url,
     upload_token = common_query_opts.upload_token,
-    -- END: Pass upload options to individual LLM callbacks
   }
 
   local askHandleResultAndCallbackGoogleAI = {
     handleResult = function(output) return handleResult(output, 'googleai_output') end,
     callback = function() end,
-    -- START: Pass upload options to individual LLM callbacks
     upload_url = common_query_opts.upload_url,
     upload_token = common_query_opts.upload_token,
-    -- END: Pass upload options to individual LLM callbacks
   }
 
   local askHandleResultAndCallbackOpenAI = {
     handleResult = function(output) return handleResult(output, 'openai_output') end,
     callback = function() end,
-    -- START: Pass upload options to individual LLM callbacks
     upload_url = common_query_opts.upload_url,
     upload_token = common_query_opts.upload_token,
-    -- END: Pass upload options to individual LLM callbacks
   }
 
   if (number_of_files == 0
@@ -234,10 +228,8 @@ function M.handle(name, input)
       prompt,
       askHandleResultAndCallbackAnthropic,
       M.opts.anthropic_api_key,
-      -- START: Pass upload options to askLight
       common_query_opts.upload_url,
       common_query_opts.upload_token
-      -- END: Pass upload options to askLight
     )
     googleai.askLight(
       googleai_model,
@@ -245,10 +237,8 @@ function M.handle(name, input)
       prompt,
       askHandleResultAndCallbackGoogleAI,
       M.opts.googleai_api_key,
-      -- START: Pass upload options to askLight
       common_query_opts.upload_url,
       common_query_opts.upload_token
-      -- END: Pass upload options to askLight
     )
     openai.askLight(
       openai_model,
@@ -256,10 +246,8 @@ function M.handle(name, input)
       prompt,
       askHandleResultAndCallbackOpenAI,
       M.opts.openai_api_key,
-      -- START: Pass upload options to askLight
       common_query_opts.upload_url,
       common_query_opts.upload_token
-      -- END: Pass upload options to askLight
     )
   else
     common.log("Using agents")
@@ -269,10 +257,8 @@ function M.handle(name, input)
       prompt,
       askHandleResultAndCallbackAnthropic,
       M.opts.anthropic_agent_host,
-      -- START: Pass upload options to askHeavy
       common_query_opts.upload_url,
       common_query_opts.upload_token
-      -- END: Pass upload options to askHeavy
     )
     googleai.askHeavy(
       googleai_model,
@@ -280,10 +266,8 @@ function M.handle(name, input)
       prompt,
       askHandleResultAndCallbackGoogleAI,
       M.opts.googleai_agent_host,
-      -- START: Pass upload options to askHeavy
       common_query_opts.upload_url,
       common_query_opts.upload_token
-      -- END: Pass upload options to askHeavy
     )
     openai.askHeavy(
       openai_model,
@@ -291,10 +275,8 @@ function M.handle(name, input)
       prompt,
       askHandleResultAndCallbackOpenAI,
       M.opts.openai_agent_host,
-      -- START: Pass upload options to askHeavy
       common_query_opts.upload_url,
       common_query_opts.upload_token
-      -- END: Pass upload options to askHeavy
     )
   end
 end

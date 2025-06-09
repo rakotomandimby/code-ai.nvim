@@ -17,8 +17,7 @@ function query.formatResult(data, upload_url, upload_token, upload_as_public)
   local formatted_completion_tokens = string.format("%gk", math.floor(completion_tokens / 1000))
 
   -- Create the result string with token counts
-  local result = '# This is '.. modelUsed .. ' answer (' .. formatted_prompt_tokens .. ' in, ' .. formatted_completion_tokens .. ' out)\n\n'
-  result = result .. data.choices[1].message.content .. '\n\n'
+  local result = data.choices[1].message.content .. '\n\n' .. '(' .. formatted_prompt_tokens .. ' in, ' .. formatted_completion_tokens .. ' out)\n\n'
   history.saveToHistory('openai_' .. modelUsed , promptToSave .. '\n\n' .. result)
 
   -- START: Upload the formatted result with public option

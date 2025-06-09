@@ -26,6 +26,16 @@ function aiconfig.getSystemInstructions()
 
   local content = file:read("*all")
   file:close()
+
+  -- There is a file named "common-system-instructions.md" that contains common system instructions.
+  -- open that file and read its content, then append it to the content of the system instructions file.
+  local common_instructions_path = './common-system-instructions.md'
+  local common_file = io.open(common_instructions_path, "r")
+  if common_file then
+    local common_content = common_file:read("*all")
+    common_file:close()
+    content = content .. "\n\n" .. common_content
+  end
   return content
 end
 

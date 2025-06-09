@@ -26,7 +26,15 @@ function aiconfig.getSystemInstructions()
 
   local content = file:read("*all")
   file:close()
+  -- print the curent working directory
+  common.log("Current working directory: " .. vim.fn.getcwd())
+  common.log("Current working directory: " .. vim.fn.getcwd())
+  common.log("Current working directory: " .. vim.fn.getcwd())
+  common.log("Current working directory: " .. vim.fn.getcwd())
+  common.log("Current working directory: " .. vim.fn.getcwd())
+  common.log("Current working directory: " .. vim.fn.getcwd())
 
+  --
   -- There is a file named "common-system-instructions.md" that contains common system instructions.
   -- open that file and read its content, then append it to the content of the system instructions file.
   local common_instructions_path = './common-system-instructions.md'

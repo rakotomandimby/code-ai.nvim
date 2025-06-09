@@ -21,7 +21,6 @@ function common.uploadContent(url, token, content, model_name, is_public)
 
   if model_name ~= 'disabled' then
     common.log("Attempting to upload " .. model_name .. " response to: " .. url)
-    common.log("====================================================")
 
     local headers = {
       ['Content-Type'] = 'text/markdown',

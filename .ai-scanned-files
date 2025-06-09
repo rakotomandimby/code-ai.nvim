@@ -1,2 +1,3 @@
 +**/*.lua
++./lua/ai/common-system-instructions.md
 +*.json

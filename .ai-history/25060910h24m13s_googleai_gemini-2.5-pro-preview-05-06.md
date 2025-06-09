@@ -1,3 +1,31 @@
+# Append the content of `./lua/ai/common-system-instructions.md` to the user defined system common-system-instructions
+
+In this plugin, I embeded a markdown file that contains the common system instructions that will be used by the AI to generate responses.
+There instructions are to be hardcoded in the AI plugin and will not be changed by the user.
+In `./lua/ai/aiconfig.lua`, I attempt to read the content of this file and append it to the user defined system instructions.
+I fail to get the base path of the plugin in order to read the file.
+
+ Give me the full new content of `./lua/ai/aiconfig.lua` to read the content of the plugin system instructions file and append it to the user defined system instructions.
+
+
+
+# This is gemini-2.5-pro-preview-05-06 answer (17k in, 4k out)
+
+# Append plugin's common system instructions
+
+We will modify the `aiconfig.getSystemInstructions` function in `lua/ai/aiconfig.lua`.
+The current implementation incorrectly tries to load the plugin's `common-system-instructions.md` file using a path relative to the current working directory.
+We will change this to use `vim.api.nvim_get_runtime_file()` to correctly locate the file within the plugin's directory by searching Neovim's runtime path.
+
+The updated function will:
+1.  Attempt to read the user-defined system instructions from `.ai-system-instructions.md` in the project root.
+2.  Attempt to read the plugin's built-in `common-system-instructions.md` file (expected to be at `lua/ai/common-system-instructions.md` relative to the plugin's root directory).
+3.  Combine these instructions. If both exist, the user's instructions will appear first, followed by the plugin's common instructions. If only one set of instructions is found, that set will be used. If neither is found, an empty string will be returned.
+4.  Add logging to trace the process of loading these instruction files.
+
+Here is the full new content of `lua/ai/aiconfig.lua`:
+
+```lua
 local aiconfig = {}
 local common = require("ai.common")
 local globpattern = require("ai.globpattern")
@@ -14,58 +42,71 @@ function aiconfig.findSystemInstructionsFile()
 end
 
 function aiconfig.getSystemInstructions()
-  local path = aiconfig.findSystemInstructionsFile()
-  local content = ""
-  if path ~= "" then
-    local file = io.open(path, "r")
+  local user_instructions_path = aiconfig.findSystemInstructionsFile()
+  local user_content = ""
+
+  if user_instructions_path ~= "" then
+    local file = io.open(user_instructions_path, "r")
     if file then
-      content = file:read("*all")
+      user_content = file:read("*all")
       file:close()
+      common.log("Read user system instructions from: " .. user_instructions_path)
+    else
+      -- This case means findSystemInstructionsFile found it, but io.open failed.
+      -- This could be due to permissions or the file being deleted between checks.
+      common.log("Error: Could not open user system instructions file: " .. user_instructions_path .. " (though it was detected).")
+      -- user_content remains ""
+    end
+  else
+    common.log("No user-defined system instructions file (.ai-system-instructions.md) found in project root: " .. vim.fn.getcwd())
+    -- user_content remains ""
+  end
+
+  -- Now, get the plugin's common system instructions
+  -- The file is expected to be at 'lua/ai/common-system-instructions.md' within the plugin's directory structure.
+  local plugin_common_instruction_relative_path = "lua/ai/common-system-instructions.md"
+  -- Search for the file in Neovim's runtimepath. `false` as the second argument means find the first occurrence.
+  local runtime_paths = vim.api.nvim_get_runtime_file(plugin_common_instruction_relative_path, false)
+  local plugin_common_instructions_full_path = ""
+
+  if runtime_paths and #runtime_paths > 0 then
+    plugin_common_instructions_full_path = runtime_paths[1] -- Take the first path found
+    common.log("Found plugin's common system instructions file at: " .. plugin_common_instructions_full_path)
+  else
+    common.log("Error: Plugin's common system instructions file '" .. plugin_common_instruction_relative_path .. "' not found in Neovim's runtime path.")
+  end
+
+  local plugin_common_content = ""
+  if plugin_common_instructions_full_path ~= "" then
+    local common_file = io.open(plugin_common_instructions_full_path, "r")
+    if common_file then
+      plugin_common_content = common_file:read("*all")
+      common_file:close()
+      common.log("Successfully read plugin's common system instructions.")
+    else
+      common.log("Error: Could not open plugin's common system instructions file at: " .. plugin_common_instructions_full_path)
+      -- plugin_common_content remains ""
     end
   end
 
-  -- Find the common-system-instructions.md file in the plugin's runtime path
-  -- We use vim.api.nvim_get_runtime_file to search for the file in all runtime paths
-  local common_instructions_paths = vim.api.nvim_get_runtime_file("lua/ai/common-system-instructions.md", false)
-  if #common_instructions_paths > 0 then
-    -- Use the first found path
-    local common_instructions_path = common_instructions_paths[1]
-    common.log("Found common system instructions at: " .. common_instructions_path)
-    local common_file = io.open(common_instructions_path, "r")
-    if common_file then
-      local common_content = common_file:read("*all")
-      common_file:close()
-      -- Append the common instructions to the user-defined instructions
-      if content ~= "" then
-        content = content .. "\n\n" .. common_content
-      else
-        -- If no user instructions, use only the common instructions
-        content = common_content
-      end
+  -- Combine the contents
+  local final_content = user_content
+  if plugin_common_content ~= "" then
+    if final_content ~= "" then
+      -- Ensure there's a clear separation if both exist
+      final_content = final_content .. "\n\n" .. plugin_common_content
     else
-      common.log("Could not open common system instructions file: " .. common_instructions_path)
-    end
-  else
-    common.log("Common system instructions file not found in runtime paths")
-    -- As a fallback, try to find it relative to this file's location
-    local current_file = debug.getinfo(1, "S").source:sub(2)
-    local plugin_dir = vim.fn.fnamemodify(current_file, ":h:h")
-    local fallback_path = plugin_dir .. "/common-system-instructions.md"
-    common.log("Trying fallback path: " .. fallback_path)
-    local fallback_file = io.open(fallback_path, "r")
-    if fallback_file then
-      local common_content = fallback_file:read("*all")
-      fallback_file:close()
-      if content ~= "" then
-        content = content .. "\n\n" .. common_content
-      else
-        content = common_content
-      end
-    else
-      common.log("Could not find common system instructions at fallback path either")
+      final_content = plugin_common_content
     end
   end
-  return content
+
+  if final_content == "" then
+    common.log("No system instructions loaded (neither user-defined nor plugin's common instructions).")
+  else
+    common.log("Final system instructions assembled.")
+  end
+
+  return final_content
 end
 
 function aiconfig.findScannedFilesConfig()
@@ -362,4 +403,4 @@ end
 
 
 return aiconfig
-
+```

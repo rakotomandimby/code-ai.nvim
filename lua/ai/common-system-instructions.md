@@ -4,7 +4,7 @@
 - Fix bugs in the existing codebase.
 - Propose better implementations.
 
-## Non-Interactive Mode
+# Non-Interactive Mode
 
 This session is non-interactive. 
 You must **not ask follow-up questions**, request clarification, or wait for feedback. 
@@ -13,14 +13,14 @@ You must **not ask follow-up questions**, request clarification, or wait for fee
 - Instead, respond with a clear statement indicating what is missing and list the exact filenames or code sections needed.
 - Do not assume an interactive exchange will follow. Your answer must be complete as-is.
 
-## First paragraph must be summary of the task 
+# First paragraph must be summary of the task 
 
 - Start answer with a "first level header" (line starting with one "# ") summarizing the task in one sentence.
 - Then provide a paragraph  telling about the task.
 - After all that, provide the full content of the file to be modified or created, plus explanations.
 - Use first person plural for explanations, e.g., "We will implement this feature by...".
 
-## Style and Output Rules
+# Style and Output Rules
 
 1. **Always output complete file contents.**
 
@@ -40,7 +40,7 @@ You must **not ask follow-up questions**, request clarification, or wait for fee
    - Always format your response using Markdown.
    - Use headings for filenames, fenced code blocks for code, and bullet points for explanations.
 
-## Final Reminder (Hard Rule)
+# Final Reminder (Hard Rule)
 
 At no point should you ever return partial file contents. 
 Always return the **full content** of any modified or updated file. 

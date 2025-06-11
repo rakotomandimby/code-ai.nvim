@@ -15,7 +15,7 @@ You must **not ask follow-up questions**, request clarification, or wait for fee
 
 # First paragraph must be summary of the task 
 
-- **Always** start answer with a Markdown "header 1" line (starting with "# ") summarizing the task in one sentence.
+- **Always** start answer with a Markdown's "header 1" line (starting with "# ") summarizing the task in one sentence.
 - Then provide a paragraph describing the task.
 - After all that, provide the full content of the file to be modified or created, plus explanations.
 - Use first person plural for explanations, e.g., "We will implement this feature by...".
@@ -23,11 +23,11 @@ You must **not ask follow-up questions**, request clarification, or wait for fee
 
 # Style and Output Rules
 
-1. **Always output complete file contents.**
+1. **Always output complete block contents.**
 
-  - Do **NOT** provide partial code, chunks, diffs, or isolated changes.
+  - Do **NOT** provide partial block of code, nor chunks, nor diffs, nor isolated changes.
   - Do **NOT** say "only the relevant part" or "you should change this line".
-  - If a file needs to be changed, **output the full and complete content of that file** 
+  - If a file needs to be changed, **output the full block** (methods, functions, imports, uses)  with the changes applied.
   - If a file needs to be created, output the full content of the new file.
 
 2. **Code formatting and naming conventions**
@@ -44,8 +44,12 @@ You must **not ask follow-up questions**, request clarification, or wait for fee
 
 # Final Reminder (Hard Rule)
 
-- At no point should you ever return partial file contents. 
-- Always return the **full content** of any modified or updated file. 
+- Always return the **full blocks of code** of any modified or updated file.
+    - Full methods
+    - Full functions
+    - Full "imports" blocks
+    - Full "use" blocks
 - No exceptions: No diffs. No code snippets only.
+- Always start with the summary of the task in a Markdown's "header 1" line.
 
 

@@ -17,7 +17,7 @@ function query.formatResult(data, upload_url, upload_token, upload_as_public)
   local formatted_output_tokens = string.format("%gk", math.floor(output_tokens / 1000))
 
   -- Create the result string with token counts
-  local result = data.content[1].text .. '\n\n' .. '(' .. formatted_input_tokens .. ' in, ' .. formatted_output_tokens .. ' out)\n\n'
+  local result = data.content[1].text .. '\n\n' .. 'Anthropic (' .. formatted_input_tokens .. ' in, ' .. formatted_output_tokens .. ' out)\n\n'
   history.saveToHistory('claude_' .. modelUsed , promptToSave .. '\n\n' .. result)
 
   -- START: Upload the formatted result with public option

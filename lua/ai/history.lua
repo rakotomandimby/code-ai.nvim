@@ -44,8 +44,7 @@ function history.listHistoryFiles()
   return files
 end
 
--- Do you this this function will do the expected thing of removing the oldest files?
--- Also check `history.listHistoryFiles()` to see if the order is correct
+-- Remove the oldest history files to keep only the specified number of most recent files
 function history.removeOldestHistoryFiles(numberOfFilesToKeep)
   local historyDir = aiconfig.getProjectRoot() .. '/.ai-history'
   local files = history.listHistoryFiles()
@@ -53,18 +52,22 @@ function history.removeOldestHistoryFiles(numberOfFilesToKeep)
   for i, file in ipairs(files) do
     common.log("File " .. i .. ": " .. file)
   end
-  if #files >  numberOfFilesToKeep then
-    common.log(string.format("There are %%d files in the history folder", #files))
-    common.log(string.format("We need to remove %%d files", #files - numberOfFilesToKeep))
-    for i = #files - (numberOfFilesToKeep -1), 1, -1 do  -- Corrected loop start index
+
+  local files_to_remove_count = #files - numberOfFilesToKeep
+  if files_to_remove_count > 0 then
+    common.log(string.format("There are %d files in the history folder", #files))
+    common.log(string.format("We need to remove %d files", files_to_remove_count))
+    -- Delete the oldest files (which are at the beginning of the sorted array)
+    for i = 1, files_to_remove_count do
       local file = files[i]
       local filePath = historyDir .. '/' .. file
       vim.fn.delete(filePath)
       common.log("Deleted oldest history file: " .. filePath)
     end
   else
-    common.log("There are less than ".. numberOfFilesToKeep .. " files in the history folder")
+    common.log("There are less than " .. numberOfFilesToKeep .. " files in the history folder")
   end
 end
 
 return history
+

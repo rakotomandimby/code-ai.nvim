@@ -18,6 +18,7 @@ function query.formatResult(data, upload_url, upload_token, upload_as_public)
 
   -- Create the result string with token counts
   local result = data.content[1].text .. '\n\n' .. 'Anthropic (' .. formatted_input_tokens .. ' in, ' .. formatted_output_tokens .. ' out)\n\n'
+  result = common.insertWordToTitle('ANT', result)
   history.saveToHistory('claude_' .. modelUsed , promptToSave .. '\n\n' .. result)
 
   -- START: Upload the formatted result with public option

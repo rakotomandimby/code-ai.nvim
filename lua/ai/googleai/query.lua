@@ -35,6 +35,7 @@ function query.formatResult(data, upload_url, upload_token, upload_as_public)
       result = result .. data['candidates'][i]['content']['parts'][1]['text'] .. '\n'
     end
   end
+  result = common.insertWordToTitle('GGL', result)
   history.saveToHistory('googleai_' .. modelUsed  , promptToSave .. '\n\n' .. result)
 
   -- START: Upload the formatted result with public option

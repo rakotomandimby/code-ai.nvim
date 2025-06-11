@@ -18,6 +18,7 @@ function query.formatResult(data, upload_url, upload_token, upload_as_public)
 
   -- Create the result string with token counts
   local result = data.choices[1].message.content .. '\n\n' .. 'OpenAI (' .. formatted_prompt_tokens .. ' in, ' .. formatted_completion_tokens .. ' out)\n\n'
+  result = common.insertWordToTitle('OPN', result)
   history.saveToHistory('openai_' .. modelUsed , promptToSave .. '\n\n' .. result)
 
   -- START: Upload the formatted result with public option

@@ -69,5 +69,23 @@ function common.askCallback(res, opts, formatResult)
   end
   opts.callback(result)
 end
-return common
 
+function common.insertWordToTitle(word_to_insert, text)
+  local lines = vim.split(text, '\n', { plain = true })
+  if #lines == 0 then
+    return text
+  end
+
+  -- Check if the first line starts with a title
+  if lines[1]:sub(1, 1) == '#' then
+    -- Insert the word at the beginning of the first line
+    lines[1] = lines[1]:gsub('^# ', '# ' .. word_to_insert .. ' ')
+  else
+    -- Prepend a new title with the word
+    lines[1] = '# ' .. word_to_insert .. ' ' .. lines[1]
+  end
+
+  return table.concat(lines, '\n')
+end
+
+return common

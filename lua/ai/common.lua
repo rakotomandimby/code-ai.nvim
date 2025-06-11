@@ -2,15 +2,19 @@ local common = {}
 local curl = require('plenary.curl') -- Added curl dependency for upload
 
 function common.log(message)
-  local log_file = io.open("/tmp/aiconfig.log", "a")
-  if not log_file then
-    error("Could not open log file for writing.")
-  end
-  -- build a timestamp string surrounded by [] that will prepend the log message
+  local log_path = "/tmp/aiconfig.log"
   local timestamp = os.date("%Y-%m-%d %H:%M:%S")
-  message = "[ " .. timestamp .. " ] -- " .. message
-  log_file:write(message .. "\n")
-  log_file:close()
+  local full_log_message = "[ " .. timestamp .. " ] -- " .. message
+
+  -- writefile expects a list of strings. Each string is a line.
+  -- It adds newlines between elements, not after the last one if it's a single line.
+  -- So, we pass a list containing one string.
+  -- The "a" flag appends to the file.
+  if vim.fn.writefile({full_log_message}, log_path, "a") == -1 then
+    -- If logging itself fails, print an error to Neovim's message area.
+    -- Avoid using common.log here to prevent potential recursion if the error is persistent.
+    vim.api.nvim_err_writeln("Error: Could not write to log file: " .. log_path)
+  end
 end
 
 function common.uploadContent(url, token, content, model_name, is_public)
@@ -89,3 +93,4 @@ function common.insertWordToTitle(word_to_insert, text)
 end
 
 return common
+

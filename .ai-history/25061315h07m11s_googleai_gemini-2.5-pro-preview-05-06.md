@@ -1,23 +1,54 @@
+# Use native lua functions to log messages
+
+I face those errors when using this plugin:
+
+```
+Error executing callback:
+lua/ai/common.lua:13: E5560: Vimscript function must not be called in a fast event context
+stack traceback:
+        [C]: in function 'writefile'
+lua/ai/common.lua:13: in function 'log'
+lua/ai/common.lua:46: in function '_user_on_exit'
+```
+
+My codebase uses vim builtin functions to performs filesystem operations.
+I think this is an error to do that everywhere, so I want to use native lua functions instead in this `log` function.
+
+Tell me the whole new content of common.lua file, using native lua functions to log messages.
+
+
+
+
+# GGL Refactor `common.log` to use native Lua I/O functions
+
+We will modify the `common.log` function in `lua/ai/common.lua` to use Lua's native file I/O operations (`io.open`, `file:write`, `file:close`) instead of `vim.fn.writefile`. This change aims to resolve errors related to calling Vimscript functions in fast event contexts. The new implementation will open the log file in append mode, write the formatted log message (ensuring a newline is added), and then close the file. Error handling will be maintained, falling back to `vim.api.nvim_err_writeln` if Lua I/O operations fail.
+
+## `lua/ai/common.lua`
+
+```lua
 local common = {}
 local curl = require('plenary.curl') -- Added curl dependency for upload
 
 function common.log(message)
   local log_path = "/tmp/aiconfig.log"
   local timestamp = os.date("%Y-%m-%d %H:%M:%S")
+  -- Ensure a newline character is appended for Lua's file:write
   local full_log_message = "[ " .. timestamp .. " ] -- " .. message .. "\n"
 
-  -- Use native Lua file I/O instead of vim.fn.writefile
-  local file, err = io.open(log_path, "a")
+  local file, err_open = io.open(log_path, "a") -- Open in append mode ("a")
   if not file then
-    -- If logging itself fails, print an error to Neovim's message area.
-    -- Using pcall to safely attempt the error write in case we're still in a fast context
-    pcall(function()
-      vim.api.nvim_echo({{"Error: Could not open log file: " .. log_path .. " - " .. (err or "unknown error"), "ErrorMsg"}}, false, {})
-    end)
+    -- If opening the file fails, print an error to Neovim's message area.
+    -- Avoid using common.log here to prevent potential recursion.
+    vim.api.nvim_err_writeln("Error: Could not open log file " .. log_path .. " for appending: " .. tostring(err_open))
     return
   end
-  
-  file:write(full_log_message)
+
+  local ok, err_write = file:write(full_log_message)
+  if not ok then
+    -- If writing to the file fails, print an error.
+    vim.api.nvim_err_writeln("Error: Could not write to log file " .. log_path .. ": " .. tostring(err_write))
+  end
+
   file:close()
 end
 
@@ -97,4 +128,9 @@ function common.insertWordToTitle(word_to_insert, text)
 end
 
 return common
+
+```
+
+GoogleAI gemini-2.5-pro-preview-05-06 (18k in, 1k out)
+
 

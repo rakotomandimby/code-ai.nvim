@@ -120,7 +120,9 @@ function M.createPopup(initialContent, width, height)
     col = 0,
   })
   vim.bo[bufnr].filetype = 'markdown'
-  vim.bo[bufnr].wrap = true
+  vim.api.nvim_win_set_option(win_id, 'wrap', true)
+
+
   update(initialContent)
   if M.opts.result_popup_gets_focus then
     vim.api.nvim_set_current_win(win_id)

@@ -31,11 +31,10 @@ M.opts = {
   locale = 'en',
   alternate_locale = 'fr',
   result_popup_gets_focus = false,
-  -- START: Added new configuration options for upload feature
   upload_url = '',
   upload_token = '',
-  upload_as_public = false, -- New configuration option with default value false
-  -- END: Added new configuration options for upload feature
+  upload_as_public = false,
+  append_embeded_system_instructions = true,
 }
 M.prompts = default_prompts
 local win_id
@@ -167,10 +166,13 @@ function M.handle(name, input)
     update = M.createPopup(M.fill(def.loading_tpl .. scanned_files, args), width - 8, height - 4)
   end
   local prompt = M.fill(def.prompt_tpl, args)
-  -- Get system instructions from file or fall back to command definition
-  local instruction = aiconfig.getSystemInstructions()
+  
+  local append_embeded = M.opts.append_embeded_system_instructions
+  if def.append_embeded_system_instructions ~= nil then
+    append_embeded = def.append_embeded_system_instructions
+  end
+  local instruction = aiconfig.getSystemInstructions(append_embeded)
 
-  -- Determine which models to use
   local anthropic_model = def.anthropic_model or M.opts.anthropic_model
   local googleai_model = def.googleai_model or M.opts.googleai_model
   local openai_model = def.openai_model or M.opts.openai_model

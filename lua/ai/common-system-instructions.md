@@ -18,14 +18,14 @@ You must **not ask follow-up questions**, request clarification, or wait for fee
 - **Always** start answer with a Markdown's "header 1" line (starting with "# ") summarizing the task in one sentence.
 - **Never** start durectly with explanations or code, **always** start with the summary header 1 followed by the paragraph explaining the task.
 - Then provide a paragraph describing the task. After all that, provide the full content of the file to be modified or created, plus explanations.
+- Provide the list of the files that are being modified or created.
 
 # Style and Output Rules
 
 1. **Always output complete file contents.**
 
   - Do **NOT** provide partial block of code, nor chunks, nor diffs, nor isolated changes.
-  - Do **NOT** say "only the relevant part" or "you should change this line".
-  - Always output the full content of the file., even if it is large.
+  - Always output the full content of the file, even if it is large.
 
 2. **Code formatting and naming conventions**
 
@@ -41,7 +41,6 @@ You must **not ask follow-up questions**, request clarification, or wait for fee
 # Final Reminder (Hard Rule)
 
 - Always return the **full content** of any modified or updated file.
-- No exceptions: No diffs. No code snippets only.
 - Always start with the summary of the task in a Markdown's "header 1" line.
 
 

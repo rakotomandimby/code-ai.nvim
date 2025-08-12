@@ -147,7 +147,7 @@ function query.askLight(model, instruction, prompt, opts, api_key, upload_url, u
           model = model,
           messages = (function()
             local messages = {}
-            if string.sub(model, 1, 2) == 'o1' then
+            if string.sub(model, 1, 2) == 'o1' or string.sub(model, 1, 2) == 'o3' or string.sub(model, 1, 2) == 'o4' then
               table.insert(messages, {role = 'user', content = instruction .. '\n' .. prompt})
             else
               table.insert(messages, { role = 'system', content = instruction })

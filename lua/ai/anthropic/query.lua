@@ -63,7 +63,7 @@ local disabled_response = {
 }
 
 -- Modified: Added upload_url, upload_token, and upload_as_public parameters
-function query.askHeavy(model, instruction, prompt, opts, agent_host, upload_url, upload_token, upload_as_public)
+function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, upload_url, upload_token, upload_as_public)
   promptToSave = prompt
   modelUsed = model
 
@@ -76,6 +76,7 @@ function query.askHeavy(model, instruction, prompt, opts, agent_host, upload_url
   local url = agent_host .. '/anthropic'
   local project_context = aiconfig.listScannedFilesFromConfig()
   local body_chunks = {}
+  table.insert(body_chunks, {api_key = api_key})
   table.insert(body_chunks, {system_instruction = instruction})
   table.insert(body_chunks, {role = 'user', content = "I need your help on this project."})
   for _, context in pairs(project_context) do

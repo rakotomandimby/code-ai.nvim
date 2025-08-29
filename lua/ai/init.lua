@@ -268,8 +268,8 @@ function M.handle(name, input)
       instruction,
       prompt,
       askHandleResultAndCallbackAnthropic,
+      M.opts.openai_api_key,
       M.opts.anthropic_agent_host,
-      M.opts.anthropic_api_key,
       common_query_opts.upload_url,
       common_query_opts.upload_token,
       common_query_opts.upload_as_public -- Pass the new configuration option
@@ -279,8 +279,8 @@ function M.handle(name, input)
       instruction,
       prompt,
       askHandleResultAndCallbackGoogleAI,
+      M.opts.openai_api_key,
       M.opts.googleai_agent_host,
-      M.opts.googleai_api_key,
       common_query_opts.upload_url,
       common_query_opts.upload_token,
       common_query_opts.upload_as_public -- Pass the new configuration option
@@ -290,8 +290,8 @@ function M.handle(name, input)
       instruction,
       prompt,
       askHandleResultAndCallbackOpenAI,
-      M.opts.openai_agent_host,
       M.opts.openai_api_key,
+      M.opts.openai_agent_host,
       common_query_opts.upload_url,
       common_query_opts.upload_token,
       common_query_opts.upload_as_public -- Pass the new configuration option

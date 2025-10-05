@@ -79,24 +79,18 @@ function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, u
     return
   end
 
-  local url = agent_host .. '/openai'
+  local url = agent_host .. '/'
   local project_context = aiconfig.listScannedFilesFromConfig()
   local body_chunks = {}
-  table.insert(body_chunks, {api_key = api_key})
-  table.insert(body_chunks, {system_instruction = instruction})
-  table.insert(body_chunks, {role = 'user', content = "I need your help on this project."})
+  table.insert(body_chunks, {type = 'api key', text = api_key})
+  table.insert(body_chunks, {type = 'system instructions', text = instruction})
+  table.insert(body_chunks, {role = 'model', text = model})
   for _, context in pairs(project_context) do
     if aiconfig.contentOf(context) ~= nil then
-      table.insert(body_chunks, {role = 'model', content = "What is the content of `" .. context .. "` ?"})
-      table.insert(body_chunks, {role = 'user',  content = "The content of `" .. context .. "` is :\n```\n" .. aiconfig.contentOf(context) .. "\n```"})
+      table.insert(body_chunks, {type = 'file', filename = context, content = aiconfig.contentOf(context)})
     end
   end
-  table.insert(body_chunks, {role = 'model', content = "Then what do you want me to do with all that information?"})
-  table.insert(body_chunks, {role = 'user', content = prompt})
-  table.insert(body_chunks, {model_to_use = model})
-  table.insert(body_chunks, {temperature = 0.2})
-  table.insert(body_chunks, {top_p = 0.1})
-  table.insert(body_chunks, {})
+  table.insert(body_chunks, {type = 'prompt', text = prompt})
 
   local function sendNextRequest(i)
     if i > #body_chunks then

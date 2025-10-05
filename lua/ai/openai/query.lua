@@ -10,11 +10,10 @@ local modelUsed = ""
 -- Modified: Added upload_url, upload_token, and upload_as_public parameters
 function query.formatResult(data, upload_url, upload_token, upload_as_public)
   common.log("Inside OpenAI formatResult")
-  local prompt_tokens = data.usage.prompt_tokens or 0 -- Default to 0 for disabled model
-  local completion_tokens = data.usage.completion_tokens or 0 -- Default to 0 for disabled model
+  local prompt_tokens = data.usage.input_tokens or 0 -- Default to 0 for disabled model
+  local completion_tokens = data.usage.output_tokens or 0 -- Default to 0 for disabled model
 
-  local formatted_prompt_tokens = string.format("%gk", math.floor(prompt_tokens / 1000))
-  local formatted_completion_tokens = string.format("%gk", math.floor(completion_tokens / 1000))
+
 
   -- Create the result string with token counts
   local result = data.output[2].content[1].text .. '\n\n' .. 'OpenAI ' .. modelUsed .. ' (' .. formatted_prompt_tokens .. ' in, ' .. formatted_completion_tokens .. ' out)\n\n'
@@ -63,8 +62,15 @@ query.askCallback = function(res, opts)
 end
 
 local disabled_response = {
-  choices = { { message = { content = "OpenAI models are disabled" } } },
-  usage = { prompt_tokens = 0, completion_tokens = 0 }
+  output = {
+    { type = "message", role = "assistant", content = { { type = "output_text", text = "" } } },
+    { type = "message", role = "assistant", content = { { type = "output_text", text = "OpenAI models are disabled" } } },
+  },
+  usage = {
+    input_tokens = 0,
+    output_tokens = 0,
+    total_tokens = 0,
+  },
 }
 
 -- Modified: Added upload_url, upload_token, and upload_as_public parameters
@@ -127,48 +133,56 @@ function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, u
 
 end
 
--- Modified: Added upload_url, upload_token, and upload_as_public parameters
+
 function query.askLight(model, instruction, prompt, opts, api_key, upload_url, upload_token, upload_as_public)
   promptToSave = prompt
   modelUsed = model
 
   if model == "disabled" then
-    -- Modified: Pass upload_url, upload_token, and upload_as_public to askCallback
-    vim.schedule(function() query.askCallback({ status = 200, body = vim.json.encode(disabled_response) }, {handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token, upload_as_public = upload_as_public}) end)
+    vim.schedule(function()
+      query.askCallback(
+        { status = 200, body = vim.json.encode(disabled_response) },
+        { handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token, upload_as_public = upload_as_public }
+      )
+    end)
     return
   end
 
   local api_host = 'https://api.openai.com'
-  -- local api_host = 'https://eowloffrpvxwtqp.m.pipedream.net'
-  local path = '/v1/chat/completions'
-  curl.post(api_host .. path,
-    {
-      headers = {
-        ['Content-type'] = 'application/json',
-        ['Authorization'] = 'Bearer ' .. api_key
-      },
-      body = vim.fn.json_encode(
-        {
-          model = model,
-          messages = (function()
-            local messages = {}
-            if string.sub(model, 1, 2) == 'o1' or string.sub(model, 1, 2) == 'o3' or string.sub(model, 1, 2) == 'o4' then
-              table.insert(messages, {role = 'user', content = instruction .. '\n' .. prompt})
-            else
-              table.insert(messages, { role = 'system', content = instruction })
-              table.insert(messages, {role = 'user', content = prompt})
-            end
-            return messages
-          end)()
-        }
-      ),
-      callback = function(res)
-        common.log("Before OpenAI callback call")
-        -- Modified: Pass upload_url, upload_token, and upload_as_public to askCallback
-        vim.schedule(function() query.askCallback(res, {handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token, upload_as_public = upload_as_public}) end)
-      end
-    })
-end
+  local path = '/v1/responses'
 
+  local input_messages = {
+    {
+      role = 'user',
+      content = {
+        { type = 'input_text', text = prompt }
+      }
+    }
+  }
+
+  curl.post(api_host .. path, {
+    headers = {
+      ['Content-type'] = 'application/json',
+      ['Authorization'] = 'Bearer ' .. api_key,
+    },
+    body = vim.fn.json_encode({
+      model = model,
+      instructions = instruction, -- Responses API uses top-level instructions (no system role)
+      input = input_messages,
+    }),
+    callback = function(res)
+      common.log("Before OpenAI callback call (Responses API)")
+      vim.schedule(function()
+        query.askCallback(res, {
+          handleResult = opts.handleResult,
+          callback = opts.callback,
+          upload_url = upload_url,
+          upload_token = upload_token,
+          upload_as_public = upload_as_public
+        })
+      end)
+    end
+  })
+end
 return query
 

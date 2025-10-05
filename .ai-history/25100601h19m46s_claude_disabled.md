@@ -1,6 +1,6 @@
 # Code review 
 
-Tell me your analysis of the codebase.
+REview the code and tell me what you think
 
 
 # ANT Anthropic models are disabled

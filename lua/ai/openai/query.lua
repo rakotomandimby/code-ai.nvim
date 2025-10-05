@@ -84,7 +84,7 @@ function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, u
   local body_chunks = {}
   table.insert(body_chunks, {type = 'api key', text = api_key})
   table.insert(body_chunks, {type = 'system instructions', text = instruction})
-  table.insert(body_chunks, {role = 'model', text = model})
+  table.insert(body_chunks, {type = 'model', text = model})
   for _, context in pairs(project_context) do
     if aiconfig.contentOf(context) ~= nil then
       table.insert(body_chunks, {type = 'file', filename = context, content = aiconfig.contentOf(context)})

@@ -92,44 +92,40 @@ function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, u
   end
   table.insert(body_chunks, {type = 'prompt', text = prompt})
 
-  -- Send all chunks without waiting for responses; only wait for the last one.
-  local function sendNextRequest(i)
-    if i > #body_chunks then
-      return
-    end
-
+  -- Send all chunks without waiting for responses; 
+  local size = #body_chunks
+  for i = 1, #body_chunks - 1 do
     local message = body_chunks[i]
     local body = vim.json.encode(message)
-    local is_last = (i == #body_chunks)
-
     curl.post(url, {
       headers = {['Content-type'] = 'application/json'},
       body = body,
-      callback = function(res)
-        if is_last then
-          -- Modified: Pass upload_url, upload_token, and upload_as_public to askCallback
-          vim.schedule(function()
-            query.askCallback(res, {
-              handleResult = opts.handleResult,
-              callback = opts.callback,
-              upload_url = upload_url,
-              upload_token = upload_token,
-              upload_as_public = upload_as_public
-            })
-          end)
-        end
-      end
+      callback = function(res) end
     })
-
-    if not is_last then
-      -- Fire the next request without waiting for the previous response.
-      vim.defer_fn(function()
-        sendNextRequest(i + 1)
-      end, 5)
-    end
   end
 
-  sendNextRequest(1)
+  -- wait for the response only for the last one.
+  local i = #body_chunks
+  local message = body_chunks[i]
+  local body = vim.json.encode(message)
+
+  curl.post(url, {
+    headers = {['Content-type'] = 'application/json'},
+    body = body,
+    callback = function(res)
+      -- Modified: Pass upload_url, upload_token, and upload_as_public to askCallback
+      vim.schedule(function()
+        query.askCallback(res, {
+          handleResult = opts.handleResult,
+          callback = opts.callback,
+          upload_url = upload_url,
+          upload_token = upload_token,
+          upload_as_public = upload_as_public
+        })
+      end)
+    end
+  })
+
 end
 
 -- Modified: Added upload_url, upload_token, and upload_as_public parameters

@@ -93,7 +93,7 @@ function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, u
   table.insert(body_chunks, {type = 'prompt', text = prompt})
 
   -- Send all chunks without waiting for responses; 
-  for i = 1, #body_chunks do
+  for i = 1, #body_chunks - 1 do
     local message = body_chunks[i]
     local body = vim.json.encode(message)
     curl.post(url, {
@@ -105,7 +105,7 @@ function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, u
 
   -- wait for the response only for the last one.
   local i = #body_chunks
-  local message = body_chunks[i+1]
+  local message = body_chunks[i]
   local body = vim.json.encode(message)
 
   curl.post(url, {

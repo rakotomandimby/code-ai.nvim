@@ -92,6 +92,7 @@ function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, u
   end
   table.insert(body_chunks, {type = 'prompt', text = prompt})
 
+  -- Send all chunks without waiting for responses; only wait for the last one.
   local function sendNextRequest(i)
     if i > #body_chunks then
       return
@@ -99,21 +100,35 @@ function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, u
 
     local message = body_chunks[i]
     local body = vim.json.encode(message)
+    local is_last = (i == #body_chunks)
 
-    curl.post(url,
-      {
-        headers = {['Content-type'] = 'application/json'},
-        body = body,
-        callback = function(res)
-          if i == #body_chunks then
-            -- Modified: Pass upload_url, upload_token, and upload_as_public to askCallback
-            vim.schedule(function() query.askCallback(res, {handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token, upload_as_public = upload_as_public}) end)
-          else
-            sendNextRequest(i + 1)
-          end
+    curl.post(url, {
+      headers = {['Content-type'] = 'application/json'},
+      body = body,
+      callback = function(res)
+        if is_last then
+          -- Modified: Pass upload_url, upload_token, and upload_as_public to askCallback
+          vim.schedule(function()
+            query.askCallback(res, {
+              handleResult = opts.handleResult,
+              callback = opts.callback,
+              upload_url = upload_url,
+              upload_token = upload_token,
+              upload_as_public = upload_as_public
+            })
+          end)
         end
-      })
+      end
+    })
+
+    if not is_last then
+      -- Fire the next request without waiting for the previous response.
+      vim.defer_fn(function()
+        sendNextRequest(i + 1)
+      end, 5)
+    end
   end
+
   sendNextRequest(1)
 end
 

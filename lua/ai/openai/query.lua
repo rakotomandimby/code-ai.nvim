@@ -7,22 +7,39 @@ local history = require('ai.history')
 local promptToSave = ""
 local modelUsed = ""
 
--- Modified: Added upload_url, upload_token, and upload_as_public parameters
 function query.formatResult(data, upload_url, upload_token, upload_as_public)
   common.log("Inside OpenAI formatResult")
-  local prompt_tokens = data.usage.input_tokens or 0 -- Default to 0 for disabled model
-  local completion_tokens = data.usage.output_tokens or 0 -- Default to 0 for disabled model
 
+  local prompt_tokens = (data.usage and data.usage.input_tokens) or 0
+  local completion_tokens = (data.usage and data.usage.output_tokens) or 0
+  local formatted_prompt_tokens = tostring(prompt_tokens)
+  local formatted_completion_tokens = tostring(completion_tokens)
 
+  local function extract_text(d)
+    if type(d) ~= 'table' or type(d.output) ~= 'table' then return nil end
+    for i = 1, 3 do
+      local msg = d.output[i]
+      if type(msg) == 'table' and type(msg.content) == 'table' then
+        for j = 1, 3 do
+          local part = msg.content[j]
+          if type(part) == 'table' and type(part.text) == 'string' and part.text ~= '' then
+            return part.text
+          end
+        end
+      end
+    end
+    return nil
+  end
 
-  -- Create the result string with token counts
-  local result = data.output[2].content[1].text .. '\n\n' .. 'OpenAI ' .. modelUsed .. ' (' .. formatted_prompt_tokens .. ' in, ' .. formatted_completion_tokens .. ' out)\n\n'
+  local text = extract_text(data) or ''
+  local result = text
+    .. '\n\n'
+    .. 'OpenAI ' .. modelUsed .. ' (' .. formatted_prompt_tokens .. ' in, ' .. formatted_completion_tokens .. ' out)\n\n'
   result = common.insertWordToTitle('OPN', result)
-  history.saveToHistory('openai_' .. modelUsed , promptToSave .. '\n\n' .. result)
+  history.saveToHistory('openai_' .. modelUsed, promptToSave .. '\n\n' .. result)
 
-  -- START: Upload the formatted result with public option
-  common.uploadContent(upload_url, upload_token, result, 'OpenAI (' .. modelUsed .. ')', upload_as_public)
-  -- END: Upload the formatted result with public option
+  local model_label = (modelUsed == 'disabled') and 'disabled' or ('OpenAI (' .. modelUsed .. ')')
+  common.uploadContent(upload_url, upload_token, result, model_label, upload_as_public)
 
   return result
 end

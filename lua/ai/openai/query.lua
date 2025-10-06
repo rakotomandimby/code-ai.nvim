@@ -7,34 +7,62 @@ local history = require('ai.history')
 local promptToSave = ""
 local modelUsed = ""
 
+
 function query.formatResult(data, upload_url, upload_token, upload_as_public)
   common.log("Inside OpenAI formatResult")
 
-  local prompt_tokens = (data.usage and data.usage.input_tokens) or 0
-  local completion_tokens = (data.usage and data.usage.output_tokens) or 0
-  local formatted_prompt_tokens = tostring(prompt_tokens)
-  local formatted_completion_tokens = tostring(completion_tokens)
+  local prompt_tokens = (type(data.usage) == 'table' and tonumber(data.usage.input_tokens)) or 0
+  local completion_tokens = (type(data.usage) == 'table' and tonumber(data.usage.output_tokens)) or 0
 
-  local function extract_text(d)
-    if type(d) ~= 'table' or type(d.output) ~= 'table' then return nil end
-    for i = 1, 3 do
-      local msg = d.output[i]
-      if type(msg) == 'table' and type(msg.content) == 'table' then
-        for j = 1, 3 do
-          local part = msg.content[j]
-          if type(part) == 'table' and type(part.text) == 'string' and part.text ~= '' then
-            return part.text
+  local function collect_texts(d)
+    local out = {}
+
+    -- Prefer the convenience field if present
+    if type(d.output_text) == 'string' and d.output_text ~= '' then
+      table.insert(out, d.output_text)
+    elseif type(d.output_text) == 'table' then
+      for _, s in ipairs(d.output_text) do
+        if type(s) == 'string' and s ~= '' then table.insert(out, s) end
+      end
+    end
+
+    -- Fallback: traverse the output array
+    if type(d.output) == 'table' then
+      for _, item in ipairs(d.output) do
+        if type(item) == 'table' then
+          if type(item.text) == 'string' and item.text ~= '' then
+            table.insert(out, item.text)
           end
+          if type(item.content) == 'table' then
+            for _, part in ipairs(item.content) do
+              if type(part) == 'table' then
+                local t = part.text or part.value
+                if type(t) == 'string' and t ~= '' then
+                  table.insert(out, t)
+                end
+              elseif type(part) == 'string' and part ~= '' then
+                table.insert(out, part)
+              end
+            end
+          elseif type(item.content) == 'string' and item.content ~= '' then
+            table.insert(out, item.content)
+          end
+        elseif type(item) == 'string' and item ~= '' then
+          table.insert(out, item)
         end
       end
     end
-    return nil
+
+    return out
   end
 
-  local text = extract_text(data) or ''
+  local pieces = collect_texts(data)
+  local text = table.concat(pieces, "\n\n")
+
   local result = text
     .. '\n\n'
-    .. 'OpenAI ' .. modelUsed .. ' (' .. formatted_prompt_tokens .. ' in, ' .. formatted_completion_tokens .. ' out)\n\n'
+    .. 'OpenAI ' .. modelUsed .. ' (' .. tostring(prompt_tokens) .. ' in, ' .. tostring(completion_tokens) .. ' out)\n\n'
+
   result = common.insertWordToTitle('OPN', result)
   history.saveToHistory('openai_' .. modelUsed, promptToSave .. '\n\n' .. result)
 
@@ -43,7 +71,6 @@ function query.formatResult(data, upload_url, upload_token, upload_as_public)
 
   return result
 end
-
 -- Added a new function to handle and format OpenAI API errors
 function query.formatError(status, body)
   common.log("Formatting OpenAI API error: " .. body)

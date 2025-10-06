@@ -67,54 +67,59 @@ function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, u
   promptToSave = prompt
   modelUsed = model
 
+  -- Check if model is disabled
   if model == "disabled" then
     -- Modified: Pass upload_url, upload_token, and upload_as_public to askCallback
     vim.schedule(function() query.askCallback({ status = 200, body = vim.json.encode(disabled_response) }, {handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token, upload_as_public = upload_as_public}) end)
     return
   end
 
-  local url = agent_host .. '/anthropic'
+  local url = agent_host .. '/'
   local project_context = aiconfig.listScannedFilesFromConfig()
   local body_chunks = {}
-  table.insert(body_chunks, {api_key = api_key})
-  table.insert(body_chunks, {system_instruction = instruction})
-  table.insert(body_chunks, {role = 'user', content = "I need your help on this project."})
+  table.insert(body_chunks, {type = 'api key', text = api_key})
+  table.insert(body_chunks, {type = 'system instructions', text = instruction})
+  table.insert(body_chunks, {type = 'model', text = model})
   for _, context in pairs(project_context) do
     if aiconfig.contentOf(context) ~= nil then
-      table.insert(body_chunks, {role = 'model', content = "What is the content of `" .. context .. "` ?"})
-      table.insert(body_chunks, {role = 'user',  content = "The content of `" .. context .. "` is :\n```\n" .. aiconfig.contentOf(context) .. "\n```"})
+      table.insert(body_chunks, {type = 'file', filename = context, content = aiconfig.contentOf(context)})
     end
   end
-  table.insert(body_chunks, {role = 'model', content = "Then what do you want me to do with all that information?"})
-  table.insert(body_chunks, {role = 'user', content = prompt})
-  table.insert(body_chunks, {model_to_use = model})
-  table.insert(body_chunks, {temperature = 0.2})
-  table.insert(body_chunks, {top_p = 0.1})
-  table.insert(body_chunks, {})
+  table.insert(body_chunks, {type = 'prompt', text = prompt})
 
-  local function sendNextRequest(i)
-    if i > #body_chunks then
-      return
-    end
-
+  -- Send all chunks without waiting for responses; 
+  for i = 1, #body_chunks - 1 do
     local message = body_chunks[i]
     local body = vim.json.encode(message)
-
-    curl.post(url,
-      {
-        headers = {['Content-type'] = 'application/json'},
-        body = body,
-        callback = function(res)
-          if i == #body_chunks then
-            -- Modified: Pass upload_url, upload_token, and upload_as_public to askCallback
-            vim.schedule(function() query.askCallback(res, {handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token, upload_as_public = upload_as_public}) end)
-          else
-            sendNextRequest(i + 1)
-          end
-        end
-      })
+    curl.post(url, {
+      headers = {['Content-type'] = 'application/json'},
+      body = body,
+      callback = function(res) end
+    })
   end
-  sendNextRequest(1)
+
+  -- wait for the response only for the last one.
+  local i = #body_chunks
+  local message = body_chunks[i]
+  local body = vim.json.encode(message)
+
+  curl.post(url, {
+    headers = {['Content-type'] = 'application/json'},
+    body = body,
+    callback = function(res)
+      -- Modified: Pass upload_url, upload_token, and upload_as_public to askCallback
+      vim.schedule(function()
+        query.askCallback(res, {
+          handleResult = opts.handleResult,
+          callback = opts.callback,
+          upload_url = upload_url,
+          upload_token = upload_token,
+          upload_as_public = upload_as_public
+        })
+      end)
+    end
+  })
+
 end
 
 

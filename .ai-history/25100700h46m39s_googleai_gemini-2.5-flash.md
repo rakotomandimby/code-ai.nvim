@@ -1,3 +1,20 @@
+# Align formatting in `lua/ai/openai/query.lua`
+
+In `lua/ai/openai/query.lua`, ensure that the formatting is consistent with the other `query.lua` files.
+Specifically, the `openai/query.lua` file displays tokens without the "k" suffix, while the other files use "k" to denote thousands of tokens.
+
+Give me the full content of the `formatREsults` function from `lua/ai/openai/query.lua`, modified to include the "k" suffix for thousands of tokens.
+
+
+
+# GGL Align token formatting in `lua/ai/openai/query.lua`
+
+I will modify the `query.formatResult` function in `lua/ai/openai/query.lua` to display token counts with a "k" suffix for thousands, ensuring consistency with `lua/ai/anthropic/query.lua` and `lua/ai/googleai/query.lua`. I will update the formatting of `prompt_tokens` and `completion_tokens` to use `string.format("%gk", math.floor(value / 1000))` before they are included in the final result string.
+
+**File modified:**
+* lua/ai/openai/query.lua
+
+```lua
 local curl = require('plenary.curl')
 local aiconfig = require('ai.aiconfig')
 local common = require('ai.common')
@@ -11,32 +28,12 @@ local modelUsed = ""
 function query.formatResult(data, upload_url, upload_token, upload_as_public)
   common.log("Inside OpenAI formatResult")
 
-  local function normalize_token_count(value)
-    if type(value) ~= 'number' then
-      value = tonumber(value) or 0
-    end
-    return value
-  end
+  local prompt_tokens = (type(data.usage) == 'table' and tonumber(data.usage.input_tokens)) or 0
+  local completion_tokens = (type(data.usage) == 'table' and tonumber(data.usage.output_tokens)) or 0
 
-  local function format_tokens(count)
-    count = normalize_token_count(count)
-    if count >= 1000 then
-      local value = count / 1000
-      if value >= 100 then
-        return string.format("%.0fk", value)
-      elseif value >= 10 then
-        return string.format("%.1fk", value)
-      else
-        return string.format("%.2fk", value)
-      end
-    end
-    return tostring(count)
-  end
-
-  local prompt_tokens = normalize_token_count(type(data.usage) == 'table' and data.usage.input_tokens or 0)
-  local completion_tokens = normalize_token_count(type(data.usage) == 'table' and data.usage.output_tokens or 0)
-  local formatted_prompt_tokens = format_tokens(prompt_tokens)
-  local formatted_completion_tokens = format_tokens(completion_tokens)
+  -- Format token counts with 'k' suffix for thousands
+  local formatted_prompt_tokens = string.format("%gk", math.floor(prompt_tokens / 1000))
+  local formatted_completion_tokens = string.format("%gk", math.floor(completion_tokens / 1000))
 
   local function collect_texts(d)
     local out = {}
@@ -253,4 +250,9 @@ function query.askLight(model, instruction, prompt, opts, api_key, upload_url, u
   })
 end
 return query
+
+```
+
+GoogleAI gemini-2.5-flash (18k in, 2k out)
+
 

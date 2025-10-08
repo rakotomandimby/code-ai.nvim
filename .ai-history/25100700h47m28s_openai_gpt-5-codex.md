@@ -1,3 +1,20 @@
+# Align formatting in `lua/ai/openai/query.lua`
+
+In `lua/ai/openai/query.lua`, ensure that the formatting is consistent with the other `query.lua` files.
+Specifically, the `openai/query.lua` file displays tokens without the "k" suffix, while the other files use "k" to denote thousands of tokens.
+
+Give me the full content of the `formatREsults` function from `lua/ai/openai/query.lua`, modified to include the "k" suffix for thousands of tokens.
+
+
+
+# OPN Align OpenAI token formatting with the other query modules in one update.
+I update the OpenAI query helper so that its formatted results use the same “k”-style token display seen in the other providers, ensuring consistent presentation of usage statistics across the plugin.
+
+### Explanation
+I add a small helper inside `query.formatResult` that formats token counts with a “k” suffix for values at or above one thousand while leaving smaller counts untouched, and I use these formatted strings when composing the final result text.
+
+### lua/ai/openai/query.lua
+```lua
 local curl = require('plenary.curl')
 local aiconfig = require('ai.aiconfig')
 local common = require('ai.common')
@@ -253,4 +270,11 @@ function query.askLight(model, instruction, prompt, opts, api_key, upload_url, u
   })
 end
 return query
+```
+
+### Modified Files
+- `lua/ai/openai/query.lua`
+
+OpenAI gpt-5-codex (14909 in, 3845 out)
+
 

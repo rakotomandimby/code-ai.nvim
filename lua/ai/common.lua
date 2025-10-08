@@ -1,16 +1,13 @@
 local common = {}
-local curl = require('plenary.curl') -- Added curl dependency for upload
+local curl = require('plenary.curl')
 
 function common.log(message)
   local log_path = "/tmp/aiconfig.log"
   local timestamp = os.date("%Y-%m-%d %H:%M:%S")
   local full_log_message = "[ " .. timestamp .. " ] -- " .. message .. "\n"
 
-  -- Use native Lua file I/O instead of vim.fn.writefile
   local file, err = io.open(log_path, "a")
   if not file then
-    -- If logging itself fails, print an error to Neovim's message area.
-    -- Using pcall to safely attempt the error write in case we're still in a fast context
     pcall(function()
       vim.api.nvim_echo({{"Error: Could not open log file: " .. log_path .. " - " .. (err or "unknown error"), "ErrorMsg"}}, false, {})
     end)
@@ -24,7 +21,7 @@ end
 function common.uploadContent(url, token, content, model_name, is_public)
   if url == '' or token == '' then
     common.log("Upload URL or Token not configured. Skipping upload for " .. model_name .. " response.")
-    return -- Early return if not configured
+    return
   end
 
   if model_name ~= 'disabled' then
@@ -34,7 +31,6 @@ function common.uploadContent(url, token, content, model_name, is_public)
       ['Content-Type'] = 'text/markdown',
       ['X-MarkdownBlog-Token'] = token
     }
-    -- Add public header if upload_as_public is true
     if is_public == true then
       headers['X-MarkdownBlog-Public'] = 'true'
       common.log("Setting upload as public for " .. model_name)
@@ -69,8 +65,7 @@ function common.askCallback(res, opts, formatResult)
     end
   else
     local data = vim.fn.json_decode(res.body)
-    -- Pass upload_url, upload_token, and upload_as_public to formatResult
-    result = formatResult(data, opts.upload_url, opts.upload_token, opts.upload_as_public) -- Modified: Pass upload_as_public option
+    result = formatResult(data, opts.upload_url, opts.upload_token, opts.upload_as_public)
     if opts.handleResult ~= nil then
       result = opts.handleResult(result)
     end
@@ -84,16 +79,96 @@ function common.insertWordToTitle(word_to_insert, text)
     return text
   end
 
-  -- Check if the first line starts with a title
   if lines[1]:sub(1, 1) == '#' then
-    -- Insert the word at the beginning of the first line
     lines[1] = lines[1]:gsub('^# ', '# ' .. word_to_insert .. ' ')
   else
-    -- Prepend a new title with the word
     lines[1] = '# ' .. word_to_insert .. ' ' .. lines[1]
   end
 
   return table.concat(lines, '\n')
+end
+
+function common.formatTokenCount(count)
+  if type(count) ~= 'number' then
+    count = tonumber(count) or 0
+  end
+  
+  if count >= 1000 then
+    local value = count / 1000
+    if value >= 100 then
+      return string.format("%.0fk", value)
+    elseif value >= 10 then
+      return string.format("%.1fk", value)
+    else
+      return string.format("%.2fk", value)
+    end
+  end
+  return tostring(count)
+end
+
+-- Handle disabled model response
+function common.handleDisabledModel(provider_name, model_name, opts, askCallback, disabled_response)
+  vim.schedule(function()
+    askCallback(
+      { status = 200, body = vim.json.encode(disabled_response) },
+      {
+        handleResult = opts.handleResult,
+        callback = opts.callback,
+        upload_url = opts.upload_url or '',
+        upload_token = opts.upload_token or '',
+        upload_as_public = opts.upload_as_public or false
+      }
+    )
+  end)
+end
+
+-- Generic heavy query implementation
+function common.askHeavy(agent_host, api_key, model, instruction, prompt, project_context, opts, askCallback)
+  local url = agent_host .. '/'
+  local body_chunks = {}
+  
+  table.insert(body_chunks, {type = 'api key', text = api_key})
+  table.insert(body_chunks, {type = 'system instructions', text = instruction})
+  table.insert(body_chunks, {type = 'model', text = model})
+  
+  for _, context in pairs(project_context) do
+    if context.content ~= nil then
+      table.insert(body_chunks, {type = 'file', filename = context.filename, content = context.content})
+    end
+  end
+  
+  table.insert(body_chunks, {type = 'prompt', text = prompt})
+
+  -- Send all chunks except the last without waiting
+  for i = 1, #body_chunks - 1 do
+    local message = body_chunks[i]
+    local body = vim.json.encode(message)
+    curl.post(url, {
+      headers = {['Content-type'] = 'application/json'},
+      body = body,
+      callback = function(res) end
+    })
+  end
+
+  -- Send the last chunk and wait for response
+  local last_message = body_chunks[#body_chunks]
+  local body = vim.json.encode(last_message)
+
+  curl.post(url, {
+    headers = {['Content-type'] = 'application/json'},
+    body = body,
+    callback = function(res)
+      vim.schedule(function()
+        askCallback(res, {
+          handleResult = opts.handleResult,
+          callback = opts.callback,
+          upload_url = opts.upload_url,
+          upload_token = opts.upload_token,
+          upload_as_public = opts.upload_as_public
+        })
+      end)
+    end
+  })
 end
 
 return common

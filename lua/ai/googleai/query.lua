@@ -7,26 +7,28 @@ local history = require('ai.history')
 local promptToSave = ""
 local modelUsed = ""
 
--- Modified: Added upload_url, upload_token, and upload_as_public parameters
 function query.formatResult(data, upload_url, upload_token, upload_as_public)
   common.log("Inside GoogleAI formatResult")
+  
   local result = ''
   local candidates_number = #data['candidates']
+  
   if candidates_number == 1 then
     if data['candidates'][1]['content'] == nil then
-      result = '\n#GoogleAI error\n\nGoogleAI stopped with the reason: ' .. data['candidates'][1]['finishReason'] .. '\n'
-      -- No upload for error
+      result = '\n#GoogleAI error\n\nGoogleAI stopped with the reason: ' 
+        .. data['candidates'][1]['finishReason'] .. '\n'
       return result
     else
-      -- Extract token counts from the response
-      local prompt_tokens = data['usageMetadata']['promptTokenCount'] or 0  -- Default to 0
-      local answer_tokens = data['usageMetadata']['candidatesTokenCount'] or 0 -- Default to 0
+      local prompt_tokens = data['usageMetadata']['promptTokenCount'] or 0
+      local answer_tokens = data['usageMetadata']['candidatesTokenCount'] or 0
 
-      -- Format token counts (e.g., "30k", "2k")
-      local formatted_prompt_tokens = string.format("%gk", math.floor(prompt_tokens / 1000))
-      local formatted_answer_tokens = string.format("%gk", math.floor(answer_tokens / 1000))
+      local formatted_prompt_tokens = common.formatTokenCount(prompt_tokens)
+      local formatted_answer_tokens = common.formatTokenCount(answer_tokens)
 
-      result = result .. data['candidates'][1]['content']['parts'][1]['text'] .. '\n\n' .. 'GoogleAI ' .. modelUsed .. ' (' .. formatted_prompt_tokens .. ' in, ' .. formatted_answer_tokens .. ' out)\n\n'
+      result = data['candidates'][1]['content']['parts'][1]['text'] 
+        .. '\n\n' 
+        .. 'GoogleAI ' .. modelUsed 
+        .. ' (' .. formatted_prompt_tokens .. ' in, ' .. formatted_answer_tokens .. ' out)\n\n'
     end
   else
     result = '# There are ' .. candidates_number .. ' GoogleAI candidates\n'
@@ -35,24 +37,21 @@ function query.formatResult(data, upload_url, upload_token, upload_as_public)
       result = result .. data['candidates'][i]['content']['parts'][1]['text'] .. '\n'
     end
   end
+  
   result = common.insertWordToTitle('GGL', result)
-  history.saveToHistory('googleai_' .. modelUsed  , promptToSave .. '\n\n' .. result)
+  history.saveToHistory('googleai_' .. modelUsed, promptToSave .. '\n\n' .. result)
 
-  -- START: Upload the formatted result with public option
   common.uploadContent(upload_url, upload_token, result, 'GoogleAI (' .. modelUsed .. ')', upload_as_public)
-  -- END: Upload the formatted result with public option
 
   return result
 end
 
--- Added a new function to handle and format GoogleAI API errors
 function query.formatError(status, body)
   common.log("Formatting GoogleAI API error: " .. body)
   local error_result
-  -- Try to parse the error JSON
   local success, error_data = pcall(vim.fn.json_decode, body)
+  
   if success and error_data and error_data.error then
-    -- Extract specific error information
     local error_code = error_data.error.code or status
     local error_message = error_data.error.message or "Unknown error occurred"
     local error_status = error_data.error.status or "ERROR"
@@ -64,16 +63,25 @@ function query.formatError(status, body)
       error_message
     )
   else
-    -- Fallback for unexpected error format
     error_result = string.format("# GoogleAI API Error (%s)\n\n```\n%s\n```", status, body)
   end
   return error_result
 end
 
 query.askCallback = function(res, opts)
-    local handleError = query.formatError  -- Set our custom error handler
-    -- Modified: Pass upload_url, upload_token, and upload_as_public from opts to common.askCallback
-    common.askCallback(res, {handleResult = opts.handleResult, handleError = handleError, callback = opts.callback, upload_url = opts.upload_url, upload_token = opts.upload_token, upload_as_public = opts.upload_as_public}, query.formatResult)
+  local handleError = query.formatError
+  common.askCallback(
+    res,
+    {
+      handleResult = opts.handleResult,
+      handleError = handleError,
+      callback = opts.callback,
+      upload_url = opts.upload_url,
+      upload_token = opts.upload_token,
+      upload_as_public = opts.upload_as_public
+    },
+    query.formatResult
+  )
 end
 
 local disabled_response = {
@@ -81,52 +89,95 @@ local disabled_response = {
   usageMetadata = { promptTokenCount = 0, candidatesTokenCount = 0 }
 }
 
--- Modified: Added upload_url, upload_token, and upload_as_public parameters
 function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, upload_url, upload_token, upload_as_public)
   promptToSave = prompt
   modelUsed = model
 
-  -- Check if model is disabled
   if model == "disabled" then
-    -- Modified: Pass upload_url, upload_token, and upload_as_public to askCallback
-    vim.schedule(function() query.askCallback({ status = 200, body = vim.json.encode(disabled_response) }, {handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token, upload_as_public = upload_as_public}) end)
+    common.handleDisabledModel('GoogleAI', model,
+      {
+        handleResult = opts.handleResult,
+        callback = opts.callback,
+        upload_url = upload_url,
+        upload_token = upload_token,
+        upload_as_public = upload_as_public
+      },
+      query.askCallback,
+      disabled_response
+    )
     return
   end
 
-  local url = agent_host .. '/'
-  local project_context = aiconfig.listScannedFilesFromConfig()
-  local body_chunks = {}
-  table.insert(body_chunks, {type = 'api key', text = api_key})
-  table.insert(body_chunks, {type = 'system instructions', text = instruction})
-  table.insert(body_chunks, {type = 'model', text = model})
-  for _, context in pairs(project_context) do
-    if aiconfig.contentOf(context) ~= nil then
-      table.insert(body_chunks, {type = 'file', filename = context, content = aiconfig.contentOf(context)})
+  local scanned_files = aiconfig.listScannedFilesFromConfig()
+  local project_context = {}
+  
+  for _, context in pairs(scanned_files) do
+    local content = aiconfig.contentOf(context)
+    if content ~= nil then
+      table.insert(project_context, {filename = context, content = content})
     end
   end
-  table.insert(body_chunks, {type = 'prompt', text = prompt})
 
-  -- Send all chunks without waiting for responses; 
-  for i = 1, #body_chunks - 1 do
-    local message = body_chunks[i]
-    local body = vim.json.encode(message)
-    curl.post(url, {
-      headers = {['Content-type'] = 'application/json'},
-      body = body,
-      callback = function(res) end
-    })
+  common.askHeavy(
+    agent_host,
+    api_key,
+    model,
+    instruction,
+    prompt,
+    project_context,
+    {
+      handleResult = opts.handleResult,
+      callback = opts.callback,
+      upload_url = upload_url,
+      upload_token = upload_token,
+      upload_as_public = upload_as_public
+    },
+    query.askCallback
+  )
+end
+
+function query.askLight(model, instruction, prompt, opts, api_key, upload_url, upload_token, upload_as_public)
+  promptToSave = prompt
+  modelUsed = model
+
+  if model == "disabled" then
+    common.handleDisabledModel('GoogleAI', model,
+      {
+        handleResult = opts.handleResult,
+        callback = opts.callback,
+        upload_url = upload_url,
+        upload_token = upload_token,
+        upload_as_public = upload_as_public
+      },
+      query.askCallback,
+      disabled_response
+    )
+    return
   end
 
-  -- wait for the response only for the last one.
-  local i = #body_chunks
-  local message = body_chunks[i]
-  local body = vim.json.encode(message)
-
-  curl.post(url, {
-    headers = {['Content-type'] = 'application/json'},
-    body = body,
+  local api_host = 'https://generativelanguage.googleapis.com'
+  local path = '/v1beta/models/' .. model .. ':generateContent'
+  
+  curl.post(api_host .. path, {
+    headers = {
+      ['Content-type'] = 'application/json',
+      ['x-goog-api-key'] = api_key
+    },
+    body = vim.fn.json_encode({
+      system_instruction = {parts = {text = instruction}},
+      contents = {{role = 'user', parts = {{text = prompt}}}},
+      safetySettings = {
+        { category = 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold = 'BLOCK_NONE' },
+        { category = 'HARM_CATEGORY_HATE_SPEECH',       threshold = 'BLOCK_NONE' },
+        { category = 'HARM_CATEGORY_HARASSMENT',        threshold = 'BLOCK_NONE' },
+        { category = 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold = 'BLOCK_NONE' }
+      },
+      generationConfig = {
+        temperature = 0.2,
+        topP = 0.5
+      }
+    }),
     callback = function(res)
-      -- Modified: Pass upload_url, upload_token, and upload_as_public to askCallback
       vim.schedule(function()
         query.askCallback(res, {
           handleResult = opts.handleResult,
@@ -138,54 +189,6 @@ function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, u
       end)
     end
   })
-
-end
-
--- Modified: Added upload_url, upload_token, and upload_as_public parameters
-function query.askLight(model, instruction, prompt, opts, api_key, upload_url, upload_token, upload_as_public)
-  promptToSave = prompt
-  modelUsed = model
-
-  if model == "disabled" then
-    -- Modified: Pass upload_url, upload_token, and upload_as_public to askCallback
-    vim.schedule(function() query.askCallback({ status = 200, body = vim.json.encode(disabled_response) }, {handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token, upload_as_public = upload_as_public}) end)
-    return
-  end
-
-  local api_host = 'https://generativelanguage.googleapis.com'
-  -- local api_host = 'https://eowloffrpvxwtqp.m.pipedream.net'
-  local path = '/v1beta/models/' .. model .. ':generateContent'
-  curl.post(api_host .. path,
-    {
-      headers = {
-        ['Content-type'] = 'application/json',
-        ['x-goog-api-key'] = api_key
-      },
-      body = vim.fn.json_encode(
-        {
-          system_instruction = {parts = {text = instruction}},
-          contents = (function()
-            local contents = {}
-            table.insert(contents, {role = 'user', parts = {{text = prompt}}})
-            return contents
-          end)(),
-          safetySettings = {
-            { category = 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold = 'BLOCK_NONE' },
-            { category = 'HARM_CATEGORY_HATE_SPEECH',       threshold = 'BLOCK_NONE' },
-            { category = 'HARM_CATEGORY_HARASSMENT',        threshold = 'BLOCK_NONE' },
-            { category = 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold = 'BLOCK_NONE' }
-          },
-          generationConfig = {
-            temperature = 0.2,
-            topP = 0.5
-          }
-        }),
-      callback = function(res)
-        -- common.log("Before GoogleAI callback call")
-        -- Modified: Pass upload_url, upload_token, and upload_as_public to askCallback
-        vim.schedule(function() query.askCallback(res, {handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token, upload_as_public = upload_as_public}) end)
-      end
-    })
 end
 
 return query

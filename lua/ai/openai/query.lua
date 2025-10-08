@@ -7,41 +7,12 @@ local history = require('ai.history')
 local promptToSave = ""
 local modelUsed = ""
 
-
 function query.formatResult(data, upload_url, upload_token, upload_as_public)
   common.log("Inside OpenAI formatResult")
-
-  local function normalize_token_count(value)
-    if type(value) ~= 'number' then
-      value = tonumber(value) or 0
-    end
-    return value
-  end
-
-  local function format_tokens(count)
-    count = normalize_token_count(count)
-    if count >= 1000 then
-      local value = count / 1000
-      if value >= 100 then
-        return string.format("%.0fk", value)
-      elseif value >= 10 then
-        return string.format("%.1fk", value)
-      else
-        return string.format("%.2fk", value)
-      end
-    end
-    return tostring(count)
-  end
-
-  local prompt_tokens = normalize_token_count(type(data.usage) == 'table' and data.usage.input_tokens or 0)
-  local completion_tokens = normalize_token_count(type(data.usage) == 'table' and data.usage.output_tokens or 0)
-  local formatted_prompt_tokens = format_tokens(prompt_tokens)
-  local formatted_completion_tokens = format_tokens(completion_tokens)
 
   local function collect_texts(d)
     local out = {}
 
-    -- Prefer the convenience field if present
     if type(d.output_text) == 'string' and d.output_text ~= '' then
       table.insert(out, d.output_text)
     elseif type(d.output_text) == 'table' then
@@ -50,7 +21,6 @@ function query.formatResult(data, upload_url, upload_token, upload_as_public)
       end
     end
 
-    -- Fallback: traverse the output array
     if type(d.output) == 'table' then
       for _, item in ipairs(d.output) do
         if type(item) == 'table' then
@@ -80,12 +50,19 @@ function query.formatResult(data, upload_url, upload_token, upload_as_public)
     return out
   end
 
+  local prompt_tokens = type(data.usage) == 'table' and (data.usage.input_tokens or 0) or 0
+  local completion_tokens = type(data.usage) == 'table' and (data.usage.output_tokens or 0) or 0
+  
+  local formatted_prompt_tokens = common.formatTokenCount(prompt_tokens)
+  local formatted_completion_tokens = common.formatTokenCount(completion_tokens)
+
   local pieces = collect_texts(data)
   local text = table.concat(pieces, "\n\n")
 
   local result = text
     .. '\n\n'
-    .. 'OpenAI ' .. modelUsed .. ' (' .. formatted_prompt_tokens .. ' in, ' .. formatted_completion_tokens .. ' out)\n\n'
+    .. 'OpenAI ' .. modelUsed 
+    .. ' (' .. formatted_prompt_tokens .. ' in, ' .. formatted_completion_tokens .. ' out)\n\n'
 
   result = common.insertWordToTitle('OPN', result)
   history.saveToHistory('openai_' .. modelUsed, promptToSave .. '\n\n' .. result)
@@ -95,19 +72,18 @@ function query.formatResult(data, upload_url, upload_token, upload_as_public)
 
   return result
 end
--- Added a new function to handle and format OpenAI API errors
+
 function query.formatError(status, body)
   common.log("Formatting OpenAI API error: " .. body)
   local error_result
-  -- Try to parse the error JSON
   local success, error_data = pcall(vim.fn.json_decode, body)
+  
   if success and error_data and error_data.error then
-    -- Extract specific error information
     local error_type = error_data.error.type or "unknown_error"
     local error_message = error_data.error.message or "Unknown error occurred"
     local error_code = error_data.error.code or ""
     local error_param = error_data.error.param or ""
-    -- Build error message with all available details
+    
     error_result = string.format("# OpenAI API Error (%s)\n\n**Error Type**: %s\n", status, error_type)
     if error_code ~= "" then
       error_result = error_result .. string.format("**Error Code**: %s\n", error_code)
@@ -117,16 +93,25 @@ function query.formatError(status, body)
     end
     error_result = error_result .. string.format("**Message**: %s\n", error_message)
   else
-    -- Fallback for unexpected error format
     error_result = string.format("# OpenAI API Error (%s)\n\n```\n%s\n```", status, body)
   end
   return error_result
 end
 
 query.askCallback = function(res, opts)
-  local handleError = query.formatError  -- Set our custom error handler
-  -- Modified: Pass upload_url, upload_token, and upload_as_public from opts to common.askCallback
-  common.askCallback(res, {handleResult = opts.handleResult, handleError = handleError, callback = opts.callback, upload_url = opts.upload_url, upload_token = opts.upload_token, upload_as_public = opts.upload_as_public}, query.formatResult)
+  local handleError = query.formatError
+  common.askCallback(
+    res,
+    {
+      handleResult = opts.handleResult,
+      handleError = handleError,
+      callback = opts.callback,
+      upload_url = opts.upload_url,
+      upload_token = opts.upload_token,
+      upload_as_public = opts.upload_as_public
+    },
+    query.formatResult
+  )
 end
 
 local disabled_response = {
@@ -141,78 +126,69 @@ local disabled_response = {
   },
 }
 
--- Modified: Added upload_url, upload_token, and upload_as_public parameters
 function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, upload_url, upload_token, upload_as_public)
   promptToSave = prompt
   modelUsed = model
 
-  -- Check if model is disabled
   if model == "disabled" then
-    -- Modified: Pass upload_url, upload_token, and upload_as_public to askCallback
-    vim.schedule(function() query.askCallback({ status = 200, body = vim.json.encode(disabled_response) }, {handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token, upload_as_public = upload_as_public}) end)
+    common.handleDisabledModel('OpenAI', model,
+      {
+        handleResult = opts.handleResult,
+        callback = opts.callback,
+        upload_url = upload_url,
+        upload_token = upload_token,
+        upload_as_public = upload_as_public
+      },
+      query.askCallback,
+      disabled_response
+    )
     return
   end
 
-  local url = agent_host .. '/'
-  local project_context = aiconfig.listScannedFilesFromConfig()
-  local body_chunks = {}
-  table.insert(body_chunks, {type = 'api key', text = api_key})
-  table.insert(body_chunks, {type = 'system instructions', text = instruction})
-  table.insert(body_chunks, {type = 'model', text = model})
-  for _, context in pairs(project_context) do
-    if aiconfig.contentOf(context) ~= nil then
-      table.insert(body_chunks, {type = 'file', filename = context, content = aiconfig.contentOf(context)})
+  local scanned_files = aiconfig.listScannedFilesFromConfig()
+  local project_context = {}
+  
+  for _, context in pairs(scanned_files) do
+    local content = aiconfig.contentOf(context)
+    if content ~= nil then
+      table.insert(project_context, {filename = context, content = content})
     end
   end
-  table.insert(body_chunks, {type = 'prompt', text = prompt})
 
-  -- Send all chunks without waiting for responses; 
-  for i = 1, #body_chunks - 1 do
-    local message = body_chunks[i]
-    local body = vim.json.encode(message)
-    curl.post(url, {
-      headers = {['Content-type'] = 'application/json'},
-      body = body,
-      callback = function(res) end
-    })
-  end
-
-  -- wait for the response only for the last one.
-  local i = #body_chunks
-  local message = body_chunks[i]
-  local body = vim.json.encode(message)
-
-  curl.post(url, {
-    headers = {['Content-type'] = 'application/json'},
-    body = body,
-    callback = function(res)
-      -- Modified: Pass upload_url, upload_token, and upload_as_public to askCallback
-      vim.schedule(function()
-        query.askCallback(res, {
-          handleResult = opts.handleResult,
-          callback = opts.callback,
-          upload_url = upload_url,
-          upload_token = upload_token,
-          upload_as_public = upload_as_public
-        })
-      end)
-    end
-  })
-
+  common.askHeavy(
+    agent_host,
+    api_key,
+    model,
+    instruction,
+    prompt,
+    project_context,
+    {
+      handleResult = opts.handleResult,
+      callback = opts.callback,
+      upload_url = upload_url,
+      upload_token = upload_token,
+      upload_as_public = upload_as_public
+    },
+    query.askCallback
+  )
 end
-
 
 function query.askLight(model, instruction, prompt, opts, api_key, upload_url, upload_token, upload_as_public)
   promptToSave = prompt
   modelUsed = model
 
   if model == "disabled" then
-    vim.schedule(function()
-      query.askCallback(
-        { status = 200, body = vim.json.encode(disabled_response) },
-        { handleResult = opts.handleResult, callback = opts.callback, upload_url = upload_url, upload_token = upload_token, upload_as_public = upload_as_public }
-      )
-    end)
+    common.handleDisabledModel('OpenAI', model,
+      {
+        handleResult = opts.handleResult,
+        callback = opts.callback,
+        upload_url = upload_url,
+        upload_token = upload_token,
+        upload_as_public = upload_as_public
+      },
+      query.askCallback,
+      disabled_response
+    )
     return
   end
 
@@ -235,7 +211,7 @@ function query.askLight(model, instruction, prompt, opts, api_key, upload_url, u
     },
     body = vim.fn.json_encode({
       model = model,
-      instructions = instruction, -- Responses API uses top-level instructions (no system role)
+      instructions = instruction,
       input = input_messages,
     }),
     callback = function(res)
@@ -252,5 +228,6 @@ function query.askLight(model, instruction, prompt, opts, api_key, upload_url, u
     end
   })
 end
+
 return query
 

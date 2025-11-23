@@ -180,15 +180,15 @@ function aiconfig.listScannedFilesFromConfig()
   end
 
   local files_with_sizes = {}
-  local processed_files = {} 
-  local project_root = aiconfig.getProjectRoot() 
+  local processed_files = {}
+  local project_root = aiconfig.getProjectRoot()
 
   for _, include_pattern in ipairs(include_glob_patterns) do
     common.log("Processing include glob pattern: " .. include_pattern)
     local potential_files = vim.fn.glob(project_root .. '/' .. include_pattern, false, true)
 
     for _, full_path in ipairs(potential_files) do
-      local relative_path = string.sub(full_path, #project_root + 2) 
+      local relative_path = string.sub(full_path, #project_root + 2)
 
       if not processed_files[relative_path] then
         local is_excluded = false
@@ -196,7 +196,7 @@ function aiconfig.listScannedFilesFromConfig()
           if string.match(relative_path, exclude_pattern_lua) then
             is_excluded = true
             common.log("File '" .. relative_path .. "' excluded by pattern: " .. exclude_pattern_lua)
-            break 
+            break
           end
         end
 
@@ -204,10 +204,10 @@ function aiconfig.listScannedFilesFromConfig()
           local file_info = vim.loop.fs_stat(full_path)
           if file_info and file_info.type == 'file' then
             table.insert(files_with_sizes, {
-              path = relative_path, 
+              path = relative_path,
               size = file_info.size
             })
-            processed_files[relative_path] = true 
+            processed_files[relative_path] = true
             common.log("File '" .. relative_path .. "' included (Size: " .. file_info.size .. ")")
           else
              common.log("Path '" .. relative_path .. "' is not a file or stat failed, skipping.")
@@ -280,6 +280,18 @@ local function format_size(size)
   end
 end
 
+local function format_percentage(part, total)
+  if total <= 0 then
+    return "0%"
+  end
+  local percentage = (part / total) * 100
+  if percentage >= 10 then
+    return string.format("%.1f%%", percentage)
+  else
+    return string.format("%.2f%%", percentage)
+  end
+end
+
 function aiconfig.listScannedFilesAsFormattedTable()
   local analyzed_files_paths = aiconfig.listScannedFilesFromConfig()
   local project_root = aiconfig.getProjectRoot()
@@ -290,7 +302,8 @@ function aiconfig.listScannedFilesAsFormattedTable()
 
   local files_data = {}
   local total_size = 0
-  local max_display_length = 0
+  local max_display_length_size = 0
+  local max_display_length_name = 0
 
   common.log("Starting Pass 1: Gathering file data and calculating max display length")
   for _, relative_path in ipairs(analyzed_files_paths) do
@@ -299,17 +312,26 @@ function aiconfig.listScannedFilesAsFormattedTable()
     local size = stat and stat.size or 0
     total_size = total_size + size
     local size_str = format_size(size)
-    local display_str = relative_path .. " (" .. size_str .. ")"
-    max_display_length = math.max(max_display_length, #display_str)
+    local name_display_str = relative_path .. " (" .. size_str .. ")"
+    max_display_length_name = math.max(max_display_length_name, #name_display_str)
     table.insert(files_data, {
       path = relative_path,
       size = size,
       size_str = size_str,
-      display_str = display_str
+      display_name = name_display_str
     })
-    common.log("Processed: " .. display_str .. " (Length: " .. #display_str .. ")")
+    common.log("Processed: " .. name_display_str .. " (Length: " .. #name_display_str .. ")")
   end
-  common.log("Pass 1 Complete. Max display length: " .. max_display_length)
+  common.log("Pass 1 Complete. Max display length (name): " .. max_display_length_name)
+
+  local total_size_str = format_size(total_size)
+
+  for _, data in ipairs(files_data) do
+    local percentage_str = format_percentage(data.size, total_size)
+    data.display_size = data.path .. " (" .. data.size_str .. ", " .. percentage_str .. ")"
+    max_display_length_size = math.max(max_display_length_size, #data.display_size)
+  end
+  common.log("Computed percentage contributions for all files.")
 
   local sorted_by_size = files_data
 
@@ -321,8 +343,6 @@ function aiconfig.listScannedFilesAsFormattedTable()
     return a.path < b.path
   end)
 
-  local total_size_str = format_size(total_size)
-
   common.log("Starting Pass 2: Building Markdown table")
   local result_lines = {}
   table.insert(result_lines, "# A total of " .. total_size_str .. " will be analyzed under project root " .. project_root .. ":\n")
@@ -330,11 +350,14 @@ function aiconfig.listScannedFilesAsFormattedTable()
   local header1 = "Sorted by Size (Desc)"
   local header2 = "Sorted by Name (Asc)"
 
-  local col1_width = math.max(#header1, max_display_length)
-  local col2_width = math.max(#header2, max_display_length)
+  local col1_width = math.max(#header1, max_display_length_size)
+  local col2_width = math.max(#header2, max_display_length_name)
   common.log("Calculated column widths: Col1=" .. col1_width .. ", Col2=" .. col2_width)
 
   local function pad_right(str, width)
+    if #str >= width then
+      return str
+    end
     return str .. string.rep(" ", width - #str)
   end
 
@@ -342,8 +365,8 @@ function aiconfig.listScannedFilesAsFormattedTable()
   table.insert(result_lines, "|-" .. string.rep("-", col1_width) .. "-|-" .. string.rep("-", col2_width) .. "-|")
 
   for i = 1, #sorted_by_size do
-    local display_size = sorted_by_size[i].display_str
-    local display_name = sorted_by_name[i].display_str
+    local display_size = sorted_by_size[i].display_size
+    local display_name = sorted_by_name[i].display_name
     local padded_display_size = pad_right(display_size, col1_width)
     local padded_display_name = pad_right(display_name, col2_width)
     table.insert(result_lines, "| " .. padded_display_size .. " | " .. padded_display_name .. " |")

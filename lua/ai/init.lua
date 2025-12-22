@@ -1,6 +1,7 @@
 local anthropic = require('ai.anthropic.query')
 local googleai = require('ai.googleai.query')
 local openai = require('ai.openai.query')
+local github = require('ai.github.query')
 local aiconfig = require('ai.aiconfig')
 local common = require('ai.common')
 
@@ -19,14 +20,17 @@ M.opts = {
   anthropic_model = '',
   googleai_model = '',
   openai_model = '',
+  github_model = '',
 
   anthropic_agent_host = '',
   googleai_agent_host = '',
   openai_agent_host = '',
+  github_agent_host = '',
 
   anthropic_api_key = '',
   googleai_api_key = '',
   openai_api_key = '',
+  github_api_key = '',
 
   locale = 'en',
   alternate_locale = 'fr',
@@ -156,10 +160,11 @@ function M.handle(name, input)
   local use_anthropic_agent = M.opts.anthropic_agent_host ~= ''
   local use_googleai_agent = M.opts.googleai_agent_host ~= ''
   local use_openai_agent = M.opts.openai_agent_host ~= ''
+  local use_github_agent = M.opts.github_agent_host ~= ''
 
   local update = nil
 
-  if (number_of_files == 0 or not use_anthropic_agent or not use_googleai_agent or not use_openai_agent ) then
+  if (number_of_files == 0 or not use_anthropic_agent or not use_googleai_agent or not use_openai_agent or not use_github_agent) then
     update = M.createPopup(M.fill(def.loading_tpl , args), width - 8, height - 4)
   else
     local scanned_files = aiconfig.listScannedFilesAsFormattedTable()
@@ -176,6 +181,7 @@ function M.handle(name, input)
   local anthropic_model = def.anthropic_model or M.opts.anthropic_model
   local googleai_model = def.googleai_model or M.opts.googleai_model
   local openai_model = def.openai_model or M.opts.openai_model
+  local github_model = def.github_model or M.opts.github_model
 
   -- If command-level models are set, use them
   if def.anthropic_model and def.anthropic_model ~= '' then
@@ -187,18 +193,21 @@ function M.handle(name, input)
   if def.openai_model and def.openai_model ~= '' then
     openai_model = def.openai_model
   end
+  if def.github_model and def.github_model ~= '' then
+    github_model = def.github_model
+  end
 
   -- START: Prepare common options for all LLM queries, including upload details
   local common_query_opts = {
     upload_url = M.opts.upload_url,
     upload_token = M.opts.upload_token,
-    upload_as_public = M.opts.upload_as_public, -- Pass the new configuration option
+    upload_as_public = M.opts.upload_as_public,
   }
   -- END: Prepare common options for all LLM queries
 
   local function handleResult(output, output_key)
     args[output_key] = output
-    args.output = (args.anthropic_output or '').. (args.googleai_output or '') .. (args.openai_output or '')
+    args.output = (args.anthropic_output or '').. (args.googleai_output or '') .. (args.openai_output or '') .. (args.github_output or '')
     update(M.fill(def.result_tpl or '${output}', args))
   end
 
@@ -207,7 +216,7 @@ function M.handle(name, input)
     callback = function() end,
     upload_url = common_query_opts.upload_url,
     upload_token = common_query_opts.upload_token,
-    upload_as_public = common_query_opts.upload_as_public, -- Pass the new configuration option
+    upload_as_public = common_query_opts.upload_as_public,
   }
 
   local askHandleResultAndCallbackGoogleAI = {
@@ -215,7 +224,7 @@ function M.handle(name, input)
     callback = function() end,
     upload_url = common_query_opts.upload_url,
     upload_token = common_query_opts.upload_token,
-    upload_as_public = common_query_opts.upload_as_public, -- Pass the new configuration option
+    upload_as_public = common_query_opts.upload_as_public,
   }
 
   local askHandleResultAndCallbackOpenAI = {
@@ -223,13 +232,22 @@ function M.handle(name, input)
     callback = function() end,
     upload_url = common_query_opts.upload_url,
     upload_token = common_query_opts.upload_token,
-    upload_as_public = common_query_opts.upload_as_public, -- Pass the new configuration option
+    upload_as_public = common_query_opts.upload_as_public,
+  }
+
+  local askHandleResultAndCallbackGithub = {
+    handleResult = function(output) return handleResult(output, 'github_output') end,
+    callback = function() end,
+    upload_url = common_query_opts.upload_url,
+    upload_token = common_query_opts.upload_token,
+    upload_as_public = common_query_opts.upload_as_public,
   }
 
   if (number_of_files == 0
         or not use_anthropic_agent
         or not use_googleai_agent
-        or not use_openai_agent) then
+        or not use_openai_agent
+        or not use_github_agent) then
     common.log("Not using agents")
     anthropic.askLight(
       anthropic_model,
@@ -239,7 +257,7 @@ function M.handle(name, input)
       M.opts.anthropic_api_key,
       common_query_opts.upload_url,
       common_query_opts.upload_token,
-      common_query_opts.upload_as_public -- Pass the new configuration option
+      common_query_opts.upload_as_public
     )
     googleai.askLight(
       googleai_model,
@@ -249,7 +267,7 @@ function M.handle(name, input)
       M.opts.googleai_api_key,
       common_query_opts.upload_url,
       common_query_opts.upload_token,
-      common_query_opts.upload_as_public -- Pass the new configuration option
+      common_query_opts.upload_as_public
     )
     openai.askLight(
       openai_model,
@@ -259,7 +277,17 @@ function M.handle(name, input)
       M.opts.openai_api_key,
       common_query_opts.upload_url,
       common_query_opts.upload_token,
-      common_query_opts.upload_as_public -- Pass the new configuration option
+      common_query_opts.upload_as_public
+    )
+    github.askLight(
+      github_model,
+      instruction,
+      prompt,
+      askHandleResultAndCallbackGithub,
+      M.opts.github_api_key,
+      common_query_opts.upload_url,
+      common_query_opts.upload_token,
+      common_query_opts.upload_as_public
     )
   else
     common.log("Using agents")
@@ -272,7 +300,7 @@ function M.handle(name, input)
       M.opts.anthropic_agent_host,
       common_query_opts.upload_url,
       common_query_opts.upload_token,
-      common_query_opts.upload_as_public -- Pass the new configuration option
+      common_query_opts.upload_as_public
     )
     googleai.askHeavy(
       googleai_model,
@@ -283,7 +311,7 @@ function M.handle(name, input)
       M.opts.googleai_agent_host,
       common_query_opts.upload_url,
       common_query_opts.upload_token,
-      common_query_opts.upload_as_public -- Pass the new configuration option
+      common_query_opts.upload_as_public
     )
     openai.askHeavy(
       openai_model,
@@ -294,7 +322,18 @@ function M.handle(name, input)
       M.opts.openai_agent_host,
       common_query_opts.upload_url,
       common_query_opts.upload_token,
-      common_query_opts.upload_as_public -- Pass the new configuration option
+      common_query_opts.upload_as_public
+    )
+    github.askHeavy(
+      github_model,
+      instruction,
+      prompt,
+      askHandleResultAndCallbackGithub,
+      M.opts.github_api_key,
+      M.opts.github_agent_host,
+      common_query_opts.upload_url,
+      common_query_opts.upload_token,
+      common_query_opts.upload_as_public
     )
   end
 end
@@ -330,11 +369,11 @@ function M.setup(opts)
     end
   end
 
-  if M.opts.anthropic_model == '' or  M.opts.googleai_model == '' or M.opts.openai_model == '' then
-    error('You need to set both anthropic_model and googleai_model and openai_model')
+  if M.opts.anthropic_model == '' or  M.opts.googleai_model == '' or M.opts.openai_model == '' or M.opts.github_model == '' then
+    error('You need to set anthropic_model, googleai_model, openai_model, and github_model')
   end
-  if M.opts.anthropic_api_key ==''or M.opts.googleai_api_key == '' or M.opts.openai_api_key == '' then
-    error('You need to set both anthropic_api_key and googleai_api_key and openai_api_key')
+  if M.opts.anthropic_api_key ==''or M.opts.googleai_api_key == '' or M.opts.openai_api_key == '' or M.opts.github_api_key == '' then
+    error('You need to set anthropic_api_key, googleai_api_key, openai_api_key, and github_api_key')
   end
 
   vim.api.nvim_create_user_command('AIListScannedFiles', function()
@@ -359,4 +398,3 @@ vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
 })
 
 return M
-

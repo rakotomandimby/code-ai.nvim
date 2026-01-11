@@ -9,13 +9,13 @@ local modelUsed = ""
 
 function query.formatResult(data, upload_url, upload_token, upload_as_public)
   common.log("Inside GoogleAI formatResult")
-  
+
   local result = ''
   local candidates_number = #data['candidates']
-  
+
   if candidates_number == 1 then
     if data['candidates'][1]['content'] == nil then
-      result = '\n#GoogleAI error\n\nGoogleAI stopped with the reason: ' 
+      result = '\n#GoogleAI error\n\nGoogleAI stopped with the reason: '
         .. data['candidates'][1]['finishReason'] .. '\n'
       return result
     else
@@ -25,9 +25,9 @@ function query.formatResult(data, upload_url, upload_token, upload_as_public)
       local formatted_prompt_tokens = common.formatTokenCount(prompt_tokens)
       local formatted_answer_tokens = common.formatTokenCount(answer_tokens)
 
-      result = data['candidates'][1]['content']['parts'][1]['text'] 
-        .. '\n\n' 
-        .. 'GoogleAI ' .. modelUsed 
+      result = data['candidates'][1]['content']['parts'][1]['text']
+        .. '\n\n'
+        .. 'GoogleAI ' .. modelUsed
         .. ' (' .. formatted_prompt_tokens .. ' in, ' .. formatted_answer_tokens .. ' out)\n\n'
     end
   else
@@ -37,11 +37,16 @@ function query.formatResult(data, upload_url, upload_token, upload_as_public)
       result = result .. data['candidates'][i]['content']['parts'][1]['text'] .. '\n'
     end
   end
-  
-  result = common.insertWordToTitle('GGL', result)
-  history.saveToHistory('googleai_' .. modelUsed, promptToSave .. '\n\n' .. result)
 
-  common.uploadContent(upload_url, upload_token, result, 'GoogleAI (' .. modelUsed .. ')', upload_as_public)
+  result = common.insertWordToTitle('GGL', result)
+
+  -- For disabled models, do not write history nor upload.
+  if modelUsed ~= 'disabled' then
+    history.saveToHistory('googleai_' .. modelUsed, promptToSave .. '\n\n' .. result)
+    common.uploadContent(upload_url, upload_token, result, 'GoogleAI (' .. modelUsed .. ')', upload_as_public)
+  else
+    common.log("GoogleAI model is disabled: skipping history save and upload.")
+  end
 
   return result
 end
@@ -50,7 +55,7 @@ function query.formatError(status, body)
   common.log("Formatting GoogleAI API error: " .. body)
   local error_result
   local success, error_data = pcall(vim.fn.json_decode, body)
-  
+
   if success and error_data and error_data.error then
     local error_code = error_data.error.code or status
     local error_message = error_data.error.message or "Unknown error occurred"
@@ -110,7 +115,7 @@ function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, u
 
   local scanned_files = aiconfig.listScannedFilesFromConfig()
   local project_context = {}
-  
+
   for _, context in pairs(scanned_files) do
     local content = aiconfig.contentOf(context)
     if content ~= nil then
@@ -157,7 +162,7 @@ function query.askLight(model, instruction, prompt, opts, api_key, upload_url, u
 
   local api_host = 'https://generativelanguage.googleapis.com'
   local path = '/v1beta/models/' .. model .. ':generateContent'
-  
+
   curl.post(api_host .. path, {
     headers = {
       ['Content-type'] = 'application/json',

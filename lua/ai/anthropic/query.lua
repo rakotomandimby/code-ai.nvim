@@ -9,22 +9,27 @@ local modelUsed = ""
 
 function query.formatResult(data, upload_url, upload_token, upload_as_public)
   common.log("Inside Anthropic formatResult")
-  
+
   local input_tokens = data.usage.input_tokens or 0
   local output_tokens = data.usage.output_tokens or 0
 
   local formatted_input_tokens = common.formatTokenCount(input_tokens)
   local formatted_output_tokens = common.formatTokenCount(output_tokens)
 
-  local result = data.content[1].text 
-    .. '\n\n' 
-    .. 'Anthropic ' .. modelUsed 
+  local result = data.content[1].text
+    .. '\n\n'
+    .. 'Anthropic ' .. modelUsed
     .. ' (' .. formatted_input_tokens .. ' in, ' .. formatted_output_tokens .. ' out)\n\n'
-  
-  result = common.insertWordToTitle('ANT', result)
-  history.saveToHistory('anthropic_' .. modelUsed, promptToSave .. '\n\n' .. result)
 
-  common.uploadContent(upload_url, upload_token, result, 'Anthropic (' .. modelUsed .. ')', upload_as_public)
+  result = common.insertWordToTitle('ANT', result)
+
+  -- For disabled models, do not write history nor upload.
+  if modelUsed ~= 'disabled' then
+    history.saveToHistory('anthropic_' .. modelUsed, promptToSave .. '\n\n' .. result)
+    common.uploadContent(upload_url, upload_token, result, 'Anthropic (' .. modelUsed .. ')', upload_as_public)
+  else
+    common.log("Anthropic model is disabled: skipping history save and upload.")
+  end
 
   return result
 end
@@ -33,7 +38,7 @@ function query.formatError(status, body)
   common.log("Formatting Anthropic API error: " .. body)
   local error_result
   local success, error_data = pcall(vim.fn.json_decode, body)
-  
+
   if success and error_data and error_data.error then
     local error_type = error_data.error.type or "unknown_error"
     local error_message = error_data.error.message or "Unknown error occurred"
@@ -52,15 +57,15 @@ end
 query.askCallback = function(res, opts)
   local handleError = query.formatError
   common.askCallback(
-    res, 
+    res,
     {
-      handleResult = opts.handleResult, 
-      handleError = handleError, 
-      callback = opts.callback, 
-      upload_url = opts.upload_url, 
-      upload_token = opts.upload_token, 
+      handleResult = opts.handleResult,
+      handleError = handleError,
+      callback = opts.callback,
+      upload_url = opts.upload_url,
+      upload_token = opts.upload_token,
       upload_as_public = opts.upload_as_public
-    }, 
+    },
     query.formatResult
   )
 end
@@ -75,15 +80,15 @@ function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, u
   modelUsed = model
 
   if model == "disabled" then
-    common.handleDisabledModel('Anthropic', model, 
+    common.handleDisabledModel('Anthropic', model,
       {
-        handleResult = opts.handleResult, 
+        handleResult = opts.handleResult,
         callback = opts.callback,
         upload_url = upload_url,
         upload_token = upload_token,
         upload_as_public = upload_as_public
-      }, 
-      query.askCallback, 
+      },
+      query.askCallback,
       disabled_response
     )
     return
@@ -91,7 +96,7 @@ function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, u
 
   local scanned_files = aiconfig.listScannedFilesFromConfig()
   local project_context = {}
-  
+
   for _, context in pairs(scanned_files) do
     local content = aiconfig.contentOf(context)
     if content ~= nil then
@@ -138,7 +143,7 @@ function query.askLight(model, instruction, prompt, opts, api_key, upload_url, u
 
   local api_host = 'https://api.anthropic.com'
   local path = '/v1/messages'
-  
+
   curl.post(api_host .. path, {
     headers = {
       ['Content-type'] = 'application/json',

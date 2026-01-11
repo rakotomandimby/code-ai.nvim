@@ -52,7 +52,7 @@ function query.formatResult(data, upload_url, upload_token, upload_as_public)
 
   local prompt_tokens = type(data.usage) == 'table' and (data.usage.input_tokens or 0) or 0
   local completion_tokens = type(data.usage) == 'table' and (data.usage.output_tokens or 0) or 0
-  
+
   local formatted_prompt_tokens = common.formatTokenCount(prompt_tokens)
   local formatted_completion_tokens = common.formatTokenCount(completion_tokens)
 
@@ -61,14 +61,19 @@ function query.formatResult(data, upload_url, upload_token, upload_as_public)
 
   local result = text
     .. '\n\n'
-    .. 'OpenAI ' .. modelUsed 
+    .. 'OpenAI ' .. modelUsed
     .. ' (' .. formatted_prompt_tokens .. ' in, ' .. formatted_completion_tokens .. ' out)\n\n'
 
   result = common.insertWordToTitle('OPN', result)
-  history.saveToHistory('openai_' .. modelUsed, promptToSave .. '\n\n' .. result)
 
-  local model_label = (modelUsed == 'disabled') and 'disabled' or ('OpenAI (' .. modelUsed .. ')')
-  common.uploadContent(upload_url, upload_token, result, model_label, upload_as_public)
+  -- For disabled models, do not write history nor upload.
+  if modelUsed ~= 'disabled' then
+    history.saveToHistory('openai_' .. modelUsed, promptToSave .. '\n\n' .. result)
+    local model_label = 'OpenAI (' .. modelUsed .. ')'
+    common.uploadContent(upload_url, upload_token, result, model_label, upload_as_public)
+  else
+    common.log("OpenAI model is disabled: skipping history save and upload.")
+  end
 
   return result
 end
@@ -77,13 +82,13 @@ function query.formatError(status, body)
   common.log("Formatting OpenAI API error: " .. body)
   local error_result
   local success, error_data = pcall(vim.fn.json_decode, body)
-  
+
   if success and error_data and error_data.error then
     local error_type = error_data.error.type or "unknown_error"
     local error_message = error_data.error.message or "Unknown error occurred"
     local error_code = error_data.error.code or ""
     local error_param = error_data.error.param or ""
-    
+
     error_result = string.format("# OpenAI API Error (%s)\n\n**Error Type**: %s\n", status, error_type)
     if error_code ~= "" then
       error_result = error_result .. string.format("**Error Code**: %s\n", error_code)
@@ -147,7 +152,7 @@ function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, u
 
   local scanned_files = aiconfig.listScannedFilesFromConfig()
   local project_context = {}
-  
+
   for _, context in pairs(scanned_files) do
     local content = aiconfig.contentOf(context)
     if content ~= nil then

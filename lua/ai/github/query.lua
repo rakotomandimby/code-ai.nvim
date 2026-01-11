@@ -36,7 +36,7 @@ function query.formatResult(data, upload_url, upload_token, upload_as_public)
     prompt_tokens = data.usage.prompt_tokens or 0
     completion_tokens = data.usage.completion_tokens or 0
   end
-  
+
   local formatted_prompt_tokens = common.formatTokenCount(prompt_tokens)
   local formatted_completion_tokens = common.formatTokenCount(completion_tokens)
 
@@ -45,14 +45,19 @@ function query.formatResult(data, upload_url, upload_token, upload_as_public)
 
   local result = text
     .. '\n\n'
-    .. 'Github ' .. modelUsed 
+    .. 'Github ' .. modelUsed
     .. ' (' .. formatted_prompt_tokens .. ' in, ' .. formatted_completion_tokens .. ' out)\n\n'
 
   result = common.insertWordToTitle('GHB', result)
-  history.saveToHistory('github_' .. modelUsed, promptToSave .. '\n\n' .. result)
 
-  local model_label = (modelUsed == 'disabled') and 'disabled' or ('Github (' .. modelUsed .. ')')
-  common.uploadContent(upload_url, upload_token, result, model_label, upload_as_public)
+  -- For disabled models, do not write history nor upload.
+  if modelUsed ~= 'disabled' then
+    history.saveToHistory('github_' .. modelUsed, promptToSave .. '\n\n' .. result)
+    local model_label = 'Github (' .. modelUsed .. ')'
+    common.uploadContent(upload_url, upload_token, result, model_label, upload_as_public)
+  else
+    common.log("Github model is disabled: skipping history save and upload.")
+  end
 
   return result
 end
@@ -61,12 +66,12 @@ function query.formatError(status, body)
   common.log("Formatting Github API error: " .. body)
   local error_result
   local success, error_data = pcall(vim.fn.json_decode, body)
-  
+
   if success and error_data and error_data.error then
     local error_message = error_data.error.message or "Unknown error occurred"
     local error_type = error_data.error.type or "unknown_error"
     local error_code = error_data.error.code or ""
-    
+
     error_result = string.format("# Github API Error (%s)\n\n**Error Type**: %s\n", status, error_type)
     if error_code ~= "" then
       error_result = error_result .. string.format("**Error Code**: %s\n", error_code)
@@ -126,7 +131,7 @@ function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, u
 
   local scanned_files = aiconfig.listScannedFilesFromConfig()
   local project_context = {}
-  
+
   for _, context in pairs(scanned_files) do
     local content = aiconfig.contentOf(context)
     if content ~= nil then
@@ -175,7 +180,7 @@ function query.askLight(model, instruction, prompt, opts, api_key, upload_url, u
   local path = '/inference/chat/completions'
 
   local messages = {}
-  
+
   -- Add system message if instruction is provided
   if instruction and instruction ~= '' then
     table.insert(messages, {
@@ -183,7 +188,7 @@ function query.askLight(model, instruction, prompt, opts, api_key, upload_url, u
       content = instruction
     })
   end
-  
+
   -- Add user message
   table.insert(messages, {
     role = 'user',

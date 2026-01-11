@@ -13,7 +13,7 @@ function common.log(message)
     end)
     return
   end
-  
+
   file:write(full_log_message)
   file:close()
 end
@@ -110,7 +110,7 @@ end
 function common.handleDisabledModel(provider_name, model_name, opts, askCallback, disabled_response)
   vim.schedule(function()
     askCallback(
-      { status = 200, body = vim.json.encode(disabled_response) },
+      { status = 200, body = vim.fn.json_encode(disabled_response) },
       {
         handleResult = opts.handleResult,
         callback = opts.callback,
@@ -122,53 +122,71 @@ function common.handleDisabledModel(provider_name, model_name, opts, askCallback
   end)
 end
 
--- Generic heavy query implementation
+-- Generic heavy query implementation with sequential data persistence
 function common.askHeavy(agent_host, api_key, model, instruction, prompt, project_context, opts, askCallback)
   local url = agent_host .. '/'
   local body_chunks = {}
-  
+
+  -- Prepare the sequence of data to be stored
   table.insert(body_chunks, {type = 'api key', text = api_key})
   table.insert(body_chunks, {type = 'system instructions', text = instruction})
   table.insert(body_chunks, {type = 'model', text = model})
-  
+
   for _, context in pairs(project_context) do
     if context.content ~= nil then
       table.insert(body_chunks, {type = 'file', filename = context.filename, content = context.content})
     end
   end
-  
+
+  -- The final chunk is the prompt which triggers the LLM call
   table.insert(body_chunks, {type = 'prompt', text = prompt})
 
-  -- Send all chunks except the last without waiting
-  for i = 1, #body_chunks - 1 do
-    local message = body_chunks[i]
-    local body = vim.json.encode(message)
+  -- Recursive function to send chunks one by one
+  local function sendChunk(index)
+    if index > #body_chunks then return end
+
+    local current_chunk = body_chunks[index]
+    local is_last = (index == #body_chunks)
+
+    common.log(string.format("Sending chunk %d/%d: %s", index, #body_chunks, current_chunk.type))
+
     curl.post(url, {
       headers = {['Content-type'] = 'application/json'},
-      body = body,
-      callback = function(res) end
+      body = vim.fn.json_encode(current_chunk),
+      callback = function(res)
+        -- If a configuration chunk fails, we stop the process and notify the user
+        if res.status ~= 200 then
+          local error_msg = string.format("Failed to store %s. Agent returned status %d: %s",
+            current_chunk.type, res.status, res.body or "No response body")
+
+          common.log(error_msg)
+          vim.schedule(function()
+            opts.callback("# Agent Error\n\n" .. error_msg)
+          end)
+          return
+        end
+
+        if is_last then
+          -- Process the final LLM response
+          vim.schedule(function()
+            askCallback(res, {
+              handleResult = opts.handleResult,
+              callback = opts.callback,
+              upload_url = opts.upload_url,
+              upload_token = opts.upload_token,
+              upload_as_public = opts.upload_as_public
+            })
+          end)
+        else
+          -- Move to the next chunk in the sequence
+          sendChunk(index + 1)
+        end
+      end
     })
   end
 
-  -- Send the last chunk and wait for response
-  local last_message = body_chunks[#body_chunks]
-  local body = vim.json.encode(last_message)
-
-  curl.post(url, {
-    headers = {['Content-type'] = 'application/json'},
-    body = body,
-    callback = function(res)
-      vim.schedule(function()
-        askCallback(res, {
-          handleResult = opts.handleResult,
-          callback = opts.callback,
-          upload_url = opts.upload_url,
-          upload_token = opts.upload_token,
-          upload_as_public = opts.upload_as_public
-        })
-      end)
-    end
-  })
+  -- Start the sequential upload
+  sendChunk(1)
 end
 
 return common

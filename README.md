@@ -54,7 +54,7 @@ This is the configuration for the plugin:
         anthropic_model = 'claude-3-7-sonnet-latest',
         googleai_model   = 'gemini-2.0-flash-exp',
         openai_model    = 'gpt-4o-mini',
-        github_model    = 'gpt-4o',
+        github_model    = 'microsoft/phi-4-reasoning',
 
         anthropic_api_key = 'YOUR_ANTHROPIC_API_KEY',      -- or read from env: `os.getenv('ANTHROPIC_API_KEY')`
         googleai_api_key  = 'YOUR_GOOGLEAI_API_KEY',       -- or read from env: `os.getenv('GOOGLEAI_API_KEY')`
@@ -88,7 +88,7 @@ This is the configuration for the plugin:
                 anthropic_model='claude-3-7-sonnet-latest',
                 googleai_model='gemini-2.0-flash-exp',
                 openai_model='gpt-4o-mini',
-                github_model='gpt-4o',
+                github_model='microsoft/phi-4-reasoning',
             },
             php_bare = {
                 command = 'AIPhpBare',
@@ -99,7 +99,7 @@ This is the configuration for the plugin:
                 anthropic_model='claude-3-7-sonnet-latest',
                 googleai_model='gemini-2.0-flash-exp',
                 openai_model='gpt-4o-mini',
-                github_model='gpt-4o',
+                github_model='microsoft/phi-4-reasoning',
             },
         },
     },

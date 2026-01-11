@@ -9,13 +9,17 @@ function common.log(message)
   local file, err = io.open(log_path, "a")
   if not file then
     pcall(function()
-      vim.api.nvim_echo({{"Error: Could not open log file: " .. log_path .. " - " .. (err or "unknown error"), "ErrorMsg"}}, false, {})
+      vim.api.nvim_echo({ { "Error: Could not open log file: " .. log_path .. " - " .. (err or "unknown error"), "ErrorMsg" } }, false, {})
     end)
     return
   end
 
   file:write(full_log_message)
   file:close()
+end
+
+local function json_encode(v)
+  return vim.json.encode(v)
 end
 
 function common.uploadContent(url, token, content, model_name, is_public)
@@ -92,7 +96,7 @@ function common.formatTokenCount(count)
   if type(count) ~= 'number' then
     count = tonumber(count) or 0
   end
-  
+
   if count >= 1000 then
     local value = count / 1000
     if value >= 100 then
@@ -110,7 +114,7 @@ end
 function common.handleDisabledModel(provider_name, model_name, opts, askCallback, disabled_response)
   vim.schedule(function()
     askCallback(
-      { status = 200, body = vim.fn.json_encode(disabled_response) },
+      { status = 200, body = json_encode(disabled_response) },
       {
         handleResult = opts.handleResult,
         callback = opts.callback,
@@ -128,18 +132,18 @@ function common.askHeavy(agent_host, api_key, model, instruction, prompt, projec
   local body_chunks = {}
 
   -- Prepare the sequence of data to be stored
-  table.insert(body_chunks, {type = 'api key', text = api_key})
-  table.insert(body_chunks, {type = 'system instructions', text = instruction})
-  table.insert(body_chunks, {type = 'model', text = model})
+  table.insert(body_chunks, { type = 'api key', text = api_key })
+  table.insert(body_chunks, { type = 'system instructions', text = instruction })
+  table.insert(body_chunks, { type = 'model', text = model })
 
   for _, context in pairs(project_context) do
     if context.content ~= nil then
-      table.insert(body_chunks, {type = 'file', filename = context.filename, content = context.content})
+      table.insert(body_chunks, { type = 'file', filename = context.filename, content = context.content })
     end
   end
 
   -- The final chunk is the prompt which triggers the LLM call
-  table.insert(body_chunks, {type = 'prompt', text = prompt})
+  table.insert(body_chunks, { type = 'prompt', text = prompt })
 
   -- Recursive function to send chunks one by one
   local function sendChunk(index)
@@ -151,8 +155,8 @@ function common.askHeavy(agent_host, api_key, model, instruction, prompt, projec
     common.log(string.format("Sending chunk %d/%d: %s", index, #body_chunks, current_chunk.type))
 
     curl.post(url, {
-      headers = {['Content-type'] = 'application/json'},
-      body = vim.fn.json_encode(current_chunk),
+      headers = { ['Content-type'] = 'application/json' },
+      body = json_encode(current_chunk),
       callback = function(res)
         -- If a configuration chunk fails, we stop the process and notify the user
         if res.status ~= 200 then

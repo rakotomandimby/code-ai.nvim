@@ -50,7 +50,7 @@ function common.uploadContent(url, token, content, model_name, is_public)
           if res.status >= 200 and res.status < 300 then
             common.log("Successfully uploaded " .. model_name .. " response. Status: " .. res.status)
           else
-            common.log("Failed to upload " .. model_name .. " response. Status: " .. res.status .. ", Body: " .. res.body)
+            common.log("Failed to upload " .. model_name .. " response. Status: " .. res.status .. ", Body: " .. (res.body or "No response body"))
           end
         end
       })
@@ -63,19 +63,29 @@ function common.askCallback(res, opts, formatResult)
   local result
   if res.status ~= 200 then
     if opts.handleError ~= nil then
-      result = opts.handleError(res.status, res.body)
+      result = opts.handleError(res.status, res.body or "No response body")
     else
-      common.log("Error: API responded with the status " .. tostring(res.status) .. '\n\n' .. res.body)
-      result = 'Error: API responded with the status ' .. tostring(res.status) .. '\n\n' .. res.body
+      local body_text = res.body or "No response body"
+      common.log("Error: API responded with the status " .. tostring(res.status) .. '\n\n' .. body_text)
+      result = 'Error: API responded with the status ' .. tostring(res.status) .. '\n\n' .. body_text
     end
   else
-    local data = vim.fn.json_decode(res.body)
-    result = formatResult(data, opts.upload_url, opts.upload_token, opts.upload_as_public)
-    if opts.handleResult ~= nil then
-      result = opts.handleResult(result)
+    local success, data = pcall(vim.fn.json_decode, res.body)
+    if not success then
+      common.log("Error: Failed to decode JSON response: " .. (res.body or "No response body"))
+      result = "Error: Failed to decode JSON response from agent."
+    else
+      result = formatResult(data, opts.upload_url, opts.upload_token, opts.upload_as_public)
     end
   end
-  opts.callback(result)
+
+  if opts.handleResult ~= nil then
+    result = opts.handleResult(result)
+  end
+  
+  if opts.callback ~= nil then
+    opts.callback(result)
+  end
 end
 
 function common.insertWordToTitle(word_to_insert, text)
@@ -252,3 +262,4 @@ function common.askHeavy(agent_host, api_key, model, instruction, prompt, projec
 end
 
 return common
+

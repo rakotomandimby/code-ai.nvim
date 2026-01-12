@@ -209,39 +209,29 @@ function M.handle(name, input)
     args[output_key] = output
     args.output = (args.anthropic_output or '').. (args.googleai_output or '') .. (args.openai_output or '') .. (args.github_output or '')
     update(M.fill(def.result_tpl or '${output}', args))
+    return output
   end
 
-  local askHandleResultAndCallbackAnthropic = {
-    handleResult = function(output) return handleResult(output, 'anthropic_output') end,
-    callback = function() end,
-    upload_url = common_query_opts.upload_url,
-    upload_token = common_query_opts.upload_token,
-    upload_as_public = common_query_opts.upload_as_public,
-  }
+  local function createProviderOpts(output_key)
+    return {
+      handleResult = function(output) return handleResult(output, output_key) end,
+      callback = function(res)
+        -- If res is a string starting with # Agent Error, it means askHeavy failed during chunk transmission
+        -- before reaching the final LLM prompt logic. We propagate it to the UI here.
+        if type(res) == 'string' and string.sub(res, 1, 13) == "# Agent Error" then
+          handleResult(res, output_key)
+        end
+      end,
+      upload_url = common_query_opts.upload_url,
+      upload_token = common_query_opts.upload_token,
+      upload_as_public = common_query_opts.upload_as_public,
+    }
+  end
 
-  local askHandleResultAndCallbackGoogleAI = {
-    handleResult = function(output) return handleResult(output, 'googleai_output') end,
-    callback = function() end,
-    upload_url = common_query_opts.upload_url,
-    upload_token = common_query_opts.upload_token,
-    upload_as_public = common_query_opts.upload_as_public,
-  }
-
-  local askHandleResultAndCallbackOpenAI = {
-    handleResult = function(output) return handleResult(output, 'openai_output') end,
-    callback = function() end,
-    upload_url = common_query_opts.upload_url,
-    upload_token = common_query_opts.upload_token,
-    upload_as_public = common_query_opts.upload_as_public,
-  }
-
-  local askHandleResultAndCallbackGithub = {
-    handleResult = function(output) return handleResult(output, 'github_output') end,
-    callback = function() end,
-    upload_url = common_query_opts.upload_url,
-    upload_token = common_query_opts.upload_token,
-    upload_as_public = common_query_opts.upload_as_public,
-  }
+  local askHandleResultAndCallbackAnthropic = createProviderOpts('anthropic_output')
+  local askHandleResultAndCallbackGoogleAI = createProviderOpts('googleai_output')
+  local askHandleResultAndCallbackOpenAI = createProviderOpts('openai_output')
+  local askHandleResultAndCallbackGithub = createProviderOpts('github_output')
 
   if (number_of_files == 0
         or not use_anthropic_agent
@@ -398,3 +388,4 @@ vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
 })
 
 return M
+

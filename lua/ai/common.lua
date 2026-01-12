@@ -45,6 +45,7 @@ function common.uploadContent(url, token, content, model_name, is_public)
       {
         headers = headers,
         body = content,
+        timeout = 500000,
         callback = function(res)
           if res.status >= 200 and res.status < 300 then
             common.log("Successfully uploaded " .. model_name .. " response. Status: " .. res.status)
@@ -126,7 +127,7 @@ function common.handleDisabledModel(provider_name, model_name, opts, askCallback
   end)
 end
 
--- Generic heavy query implementation with sequential data persistence
+-- Generic heavy query implementation with iterative state machine for data persistence
 function common.askHeavy(agent_host, api_key, model, instruction, prompt, project_context, opts, askCallback)
   local url = agent_host .. '/'
   local body_chunks = {}
@@ -145,53 +146,109 @@ function common.askHeavy(agent_host, api_key, model, instruction, prompt, projec
   -- The final chunk is the prompt which triggers the LLM call
   table.insert(body_chunks, { type = 'prompt', text = prompt })
 
-  -- Recursive function to send chunks one by one
-  local function sendChunk(index)
-    if index > #body_chunks then return end
+  -- State machine variables
+  local current_index = 0
+  local total_chunks = #body_chunks
+  local failed = false
 
-    local current_chunk = body_chunks[index]
-    local is_last = (index == #body_chunks)
+  common.log(string.format("askHeavy: Starting to send %d chunks to %s", total_chunks, url))
 
-    common.log(string.format("Sending chunk %d/%d: %s", index, #body_chunks, current_chunk.type))
+  -- Iterative function to send the next chunk
+  local function sendNextChunk()
+    -- Check if we've already failed or completed
+    if failed then
+      common.log("askHeavy: Skipping chunk sending due to previous failure")
+      return
+    end
 
-    curl.post(url, {
-      headers = { ['Content-type'] = 'application/json' },
-      body = json_encode(current_chunk),
-      callback = function(res)
-        -- If a configuration chunk fails, we stop the process and notify the user
-        if res.status ~= 200 then
-          local error_msg = string.format("Failed to store %s. Agent returned status %d: %s",
-            current_chunk.type, res.status, res.body or "No response body")
+    current_index = current_index + 1
 
-          common.log(error_msg)
-          vim.schedule(function()
-            opts.callback("# Agent Error\n\n" .. error_msg)
-          end)
-          return
+    if current_index > total_chunks then
+      common.log("askHeavy: All chunks sent successfully")
+      return
+    end
+
+    local current_chunk = body_chunks[current_index]
+    local is_last = (current_index == total_chunks)
+    local chunk_type = current_chunk.type
+    local chunk_identifier = chunk_type
+    if chunk_type == 'file' then
+      chunk_identifier = chunk_type .. ':' .. (current_chunk.filename or 'unknown')
+    end
+
+    common.log(string.format("askHeavy: Sending chunk %d/%d: %s", current_index, total_chunks, chunk_identifier))
+
+    -- Use pcall to catch synchronous errors from curl.post
+    local success, err = pcall(function()
+      curl.post(url, {
+        headers = { ['Content-type'] = 'application/json' },
+        body = json_encode(current_chunk),
+        timeout = 30000,
+        callback = function(res)
+          -- Log the response status
+          local response_status = res.status or 'nil'
+          local response_body_preview = ''
+          if res.body and #res.body > 0 then
+            response_body_preview = string.sub(res.body, 1, 100)
+            if #res.body > 100 then
+              response_body_preview = response_body_preview .. '...'
+            end
+          end
+          common.log(string.format("askHeavy: Received response for chunk %d/%d (%s): status=%s, body=%s",
+            current_index, total_chunks, chunk_identifier, tostring(response_status), response_body_preview))
+
+          -- If a configuration chunk fails, we stop the process and notify the user
+          if res.status ~= 200 then
+            failed = true
+            local error_msg = string.format("Failed to store %s (chunk %d/%d). Agent returned status %s: %s",
+              chunk_identifier, current_index, total_chunks, tostring(res.status), res.body or "No response body")
+
+            common.log("askHeavy: ERROR - " .. error_msg)
+            vim.schedule(function()
+              opts.callback("# Agent Error\n\n" .. error_msg)
+            end)
+            return
+          end
+
+          if is_last then
+            -- Process the final LLM response
+            common.log(string.format("askHeavy: Final chunk (prompt) processed successfully, invoking askCallback"))
+            vim.schedule(function()
+              askCallback(res, {
+                handleResult = opts.handleResult,
+                callback = opts.callback,
+                upload_url = opts.upload_url,
+                upload_token = opts.upload_token,
+                upload_as_public = opts.upload_as_public
+              })
+            end)
+          else
+            -- Schedule the next chunk on Neovim's event loop with a small delay
+            -- This prevents stack overflow and allows the event loop to breathe
+            common.log(string.format("askHeavy: Scheduling next chunk %d/%d", current_index + 1, total_chunks))
+            vim.defer_fn(function()
+              sendNextChunk()
+            end, 3)
+          end
         end
+      })
+    end)
 
-        if is_last then
-          -- Process the final LLM response
-          vim.schedule(function()
-            askCallback(res, {
-              handleResult = opts.handleResult,
-              callback = opts.callback,
-              upload_url = opts.upload_url,
-              upload_token = opts.upload_token,
-              upload_as_public = opts.upload_as_public
-            })
-          end)
-        else
-          -- Move to the next chunk in the sequence
-          sendChunk(index + 1)
-        end
-      end
-    })
+    if not success then
+      failed = true
+      local error_msg = string.format("Exception while sending chunk %d/%d (%s): %s",
+        current_index, total_chunks, chunk_identifier, tostring(err))
+      common.log("askHeavy: EXCEPTION - " .. error_msg)
+      vim.schedule(function()
+        opts.callback("# Agent Error\n\n" .. error_msg)
+      end)
+    end
   end
 
-  -- Start the sequential upload
-  sendChunk(1)
+  -- Start the iterative upload by scheduling the first chunk
+  vim.defer_fn(function()
+    sendNextChunk()
+  end, 3)
 end
 
 return common
-

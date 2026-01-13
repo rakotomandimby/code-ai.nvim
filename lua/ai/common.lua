@@ -207,11 +207,37 @@ function common.askHeavy(agent_host, api_key, model, instruction, prompt, projec
           common.log(string.format("askHeavy: Received response for chunk %d/%d (%s): status=%s, body=%s",
             current_index, total_chunks, chunk_identifier, tostring(response_status), response_body_preview))
 
-          -- If a configuration chunk fails, we stop the process and notify the user
+          -- If a chunk fails, we stop the process and notify the user
           if res.status ~= 200 then
             failed = true
-            local error_msg = string.format("Failed to store %s (chunk %d/%d). Agent returned status %s: %s",
-              chunk_identifier, current_index, total_chunks, tostring(res.status), res.body or "No response body")
+            
+            -- Try to parse the error response from the agent
+            local error_details = res.body or "No response body"
+            local success_parse, error_data = pcall(vim.fn.json_decode, res.body)
+            if success_parse and error_data and error_data.error then
+              error_details = error_data.error
+            end
+            
+            local error_msg
+            if chunk_type == 'file' then
+              error_msg = string.format(
+                "Failed to upload file '%s' (chunk %d/%d). Agent returned status %s.\n\nError: %s\n\nThis file may be empty or have invalid content.",
+                current_chunk.filename or 'unknown',
+                current_index,
+                total_chunks,
+                tostring(response_status),
+                error_details
+              )
+            else
+              error_msg = string.format(
+                "Failed to store %s (chunk %d/%d). Agent returned status %s.\n\nError: %s",
+                chunk_identifier,
+                current_index,
+                total_chunks,
+                tostring(response_status),
+                error_details
+              )
+            end
 
             common.log("askHeavy: ERROR - " .. error_msg)
             vim.schedule(function()

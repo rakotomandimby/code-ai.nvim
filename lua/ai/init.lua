@@ -162,9 +162,32 @@ function M.handle(name, input)
   local use_openai_agent = M.opts.openai_agent_host ~= ''
   local use_github_agent = M.opts.github_agent_host ~= ''
 
+  -- Check if the command definition has a query_mode override
+  local query_mode = def.query_mode
+  local use_agent_mode = false
+
+  if query_mode == "standalone" then
+    common.log("Command '" .. name .. "' forcing standalone mode via query_mode parameter")
+    use_agent_mode = false
+  elseif query_mode == "agent" then
+    common.log("Command '" .. name .. "' forcing agent mode via query_mode parameter")
+    use_agent_mode = true
+  else
+    -- Use the existing automatic detection logic
+    if (number_of_files == 0
+          or not use_anthropic_agent
+          or not use_googleai_agent
+          or not use_openai_agent
+          or not use_github_agent) then
+      use_agent_mode = false
+    else
+      use_agent_mode = true
+    end
+  end
+
   local update = nil
 
-  if (number_of_files == 0 or not use_anthropic_agent or not use_googleai_agent or not use_openai_agent or not use_github_agent) then
+  if not use_agent_mode then
     update = M.createPopup(M.fill(def.loading_tpl , args), width - 8, height - 4)
   else
     local scanned_files = aiconfig.listScannedFilesAsFormattedTable()
@@ -233,12 +256,8 @@ function M.handle(name, input)
   local askHandleResultAndCallbackOpenAI = createProviderOpts('openai_output')
   local askHandleResultAndCallbackGithub = createProviderOpts('github_output')
 
-  if (number_of_files == 0
-        or not use_anthropic_agent
-        or not use_googleai_agent
-        or not use_openai_agent
-        or not use_github_agent) then
-    common.log("Not using agents")
+  if not use_agent_mode then
+    common.log("Using standalone mode (Light)")
     anthropic.askLight(
       anthropic_model,
       instruction,
@@ -280,7 +299,7 @@ function M.handle(name, input)
       common_query_opts.upload_as_public
     )
   else
-    common.log("Using agents")
+    common.log("Using agent mode (Heavy)")
     anthropic.askHeavy(
       anthropic_model,
       instruction,

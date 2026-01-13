@@ -156,43 +156,53 @@ function M.handle(name, input)
     input_encoded = vim.fn.json_encode(input),
   }
 
-  local number_of_files = #aiconfig.listScannedFilesFromConfig()
+  -- First, check if agent hosts are configured
   local use_anthropic_agent = M.opts.anthropic_agent_host ~= ''
   local use_googleai_agent = M.opts.googleai_agent_host ~= ''
   local use_openai_agent = M.opts.openai_agent_host ~= ''
   local use_github_agent = M.opts.github_agent_host ~= ''
 
-  -- Check if the command definition has a query_mode override
+  -- Determine the query mode: per-command override or global logic
   local query_mode = def.query_mode
-  local use_agent_mode = false
+  local is_heavy = false
+  local number_of_files = 0
 
   if query_mode == "standalone" then
-    common.log("Command '" .. name .. "' forcing standalone mode via query_mode parameter")
-    use_agent_mode = false
+    is_heavy = false
+    common.log("Using standalone mode (forced by command configuration)")
   elseif query_mode == "agent" then
-    common.log("Command '" .. name .. "' forcing agent mode via query_mode parameter")
-    use_agent_mode = true
+    is_heavy = true
+    common.log("Using agent mode (forced by command configuration)")
+    -- Only scan files if agent mode is forced
+    number_of_files = #aiconfig.listScannedFilesFromConfig()
   else
-    -- Use the existing automatic detection logic
-    if (number_of_files == 0
-          or not use_anthropic_agent
-          or not use_googleai_agent
-          or not use_openai_agent
-          or not use_github_agent) then
-      use_agent_mode = false
+    -- Fallback to global logic: only scan files if all agents are configured
+    local all_agents_configured = use_anthropic_agent and use_googleai_agent and use_openai_agent and use_github_agent
+    
+    if all_agents_configured then
+      -- Only scan files if all agents are configured
+      number_of_files = #aiconfig.listScannedFilesFromConfig()
+      is_heavy = (number_of_files > 0)
+      if is_heavy then
+        common.log("Using agent mode (all agents configured and files found)")
+      else
+        common.log("Using standalone mode (all agents configured but no files to scan)")
+      end
     else
-      use_agent_mode = true
+      -- If not all agents are configured, use standalone mode without scanning
+      is_heavy = false
+      common.log("Using standalone mode (not all agent hosts configured)")
     end
   end
 
   local update = nil
-
-  if not use_agent_mode then
+  if not is_heavy then
     update = M.createPopup(M.fill(def.loading_tpl , args), width - 8, height - 4)
   else
     local scanned_files = aiconfig.listScannedFilesAsFormattedTable()
     update = M.createPopup(M.fill(def.loading_tpl .. scanned_files, args), width - 8, height - 4)
   end
+
   local prompt = M.fill(def.prompt_tpl, args)
   
   local append_embeded = M.opts.append_embeded_system_instructions
@@ -256,8 +266,7 @@ function M.handle(name, input)
   local askHandleResultAndCallbackOpenAI = createProviderOpts('openai_output')
   local askHandleResultAndCallbackGithub = createProviderOpts('github_output')
 
-  if not use_agent_mode then
-    common.log("Using standalone mode (Light)")
+  if not is_heavy then
     anthropic.askLight(
       anthropic_model,
       instruction,
@@ -299,7 +308,6 @@ function M.handle(name, input)
       common_query_opts.upload_as_public
     )
   else
-    common.log("Using agent mode (Heavy)")
     anthropic.askHeavy(
       anthropic_model,
       instruction,

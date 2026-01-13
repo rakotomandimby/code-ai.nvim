@@ -259,12 +259,11 @@ function common.askHeavy(agent_host, api_key, model, instruction, prompt, projec
               })
             end)
           else
-            -- Schedule the next chunk on Neovim's event loop with a small delay
-            -- This prevents stack overflow and allows the event loop to breathe
+            -- Schedule the next chunk immediately on Neovim's event loop
             common.log(string.format("askHeavy: Scheduling next chunk %d/%d", current_index + 1, total_chunks))
-            vim.defer_fn(function()
+            vim.schedule(function()
               sendNextChunk()
-            end, 3)
+            end)
           end
         end
       })
@@ -281,10 +280,10 @@ function common.askHeavy(agent_host, api_key, model, instruction, prompt, projec
     end
   end
 
-  -- Start the iterative upload by scheduling the first chunk
-  vim.defer_fn(function()
+  -- Start the iterative upload immediately
+  vim.schedule(function()
     sendNextChunk()
-  end, 3)
+  end)
 end
 
 return common

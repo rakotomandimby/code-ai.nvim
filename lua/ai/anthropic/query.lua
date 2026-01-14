@@ -144,18 +144,27 @@ function query.askLight(model, instruction, prompt, opts, api_key, upload_url, u
   local api_host = 'https://api.anthropic.com'
   local path = '/v1/messages'
 
+  -- Build request body - only include system if instruction is not empty
+  local request_body = {
+    model = model,
+    max_tokens = 64000,
+    messages = {{role = 'user', content = prompt}}
+  }
+
+  -- Only add system field if instruction is provided
+  if instruction and instruction ~= '' then
+    request_body.system = instruction
+  else
+    common.log("Anthropic Light mode: No system instructions provided")
+  end
+
   curl.post(api_host .. path, {
     headers = {
       ['Content-type'] = 'application/json',
       ['x-api-key'] = api_key,
       ['anthropic-version'] = '2023-06-01'
     },
-    body = vim.fn.json_encode({
-      model = model,
-      max_tokens = 8192,
-      system = instruction,
-      messages = {{role = 'user', content = prompt}}
-    }),
+    body = vim.fn.json_encode(request_body),
     callback = function(res)
       common.log("Before Anthropic callback call")
       vim.schedule(function()

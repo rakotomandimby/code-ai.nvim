@@ -163,25 +163,34 @@ function query.askLight(model, instruction, prompt, opts, api_key, upload_url, u
   local api_host = 'https://generativelanguage.googleapis.com'
   local path = '/v1beta/models/' .. model .. ':generateContent'
 
+  -- Build request body - only include system_instruction if instruction is not empty
+  local request_body = {
+    contents = {{role = 'user', parts = {{text = prompt}}}},
+    safetySettings = {
+      { category = 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold = 'BLOCK_NONE' },
+      { category = 'HARM_CATEGORY_HATE_SPEECH',       threshold = 'BLOCK_NONE' },
+      { category = 'HARM_CATEGORY_HARASSMENT',        threshold = 'BLOCK_NONE' },
+      { category = 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold = 'BLOCK_NONE' }
+    },
+    generationConfig = {
+      temperature = 0.2,
+      topP = 0.5
+    }
+  }
+
+  -- Only add system_instruction field if instruction is provided
+  if instruction and instruction ~= '' then
+    request_body.system_instruction = {parts = {text = instruction}}
+  else
+    common.log("GoogleAI Light mode: No system instructions provided")
+  end
+
   curl.post(api_host .. path, {
     headers = {
       ['Content-type'] = 'application/json',
       ['x-goog-api-key'] = api_key
     },
-    body = vim.fn.json_encode({
-      system_instruction = {parts = {text = instruction}},
-      contents = {{role = 'user', parts = {{text = prompt}}}},
-      safetySettings = {
-        { category = 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold = 'BLOCK_NONE' },
-        { category = 'HARM_CATEGORY_HATE_SPEECH',       threshold = 'BLOCK_NONE' },
-        { category = 'HARM_CATEGORY_HARASSMENT',        threshold = 'BLOCK_NONE' },
-        { category = 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold = 'BLOCK_NONE' }
-      },
-      generationConfig = {
-        temperature = 0.2,
-        topP = 0.5
-      }
-    }),
+    body = vim.fn.json_encode(request_body),
     callback = function(res)
       vim.schedule(function()
         query.askCallback(res, {

@@ -181,12 +181,14 @@ function query.askLight(model, instruction, prompt, opts, api_key, upload_url, u
 
   local messages = {}
 
-  -- Add system message if instruction is provided
+  -- Add system message only if instruction is provided and not empty
   if instruction and instruction ~= '' then
     table.insert(messages, {
       role = 'system',
       content = instruction
     })
+  else
+    common.log("Github Light mode: No system instructions provided")
   end
 
   -- Add user message

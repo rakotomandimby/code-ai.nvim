@@ -209,16 +209,25 @@ function query.askLight(model, instruction, prompt, opts, api_key, upload_url, u
     }
   }
 
+  -- Build request body - only include instructions if instruction is not empty
+  local request_body = {
+    model = model,
+    input = input_messages,
+  }
+
+  -- Only add instructions field if instruction is provided
+  if instruction and instruction ~= '' then
+    request_body.instructions = instruction
+  else
+    common.log("OpenAI Light mode: No system instructions provided")
+  end
+
   curl.post(api_host .. path, {
     headers = {
       ['Content-type'] = 'application/json',
       ['Authorization'] = 'Bearer ' .. api_key,
     },
-    body = vim.fn.json_encode({
-      model = model,
-      instructions = instruction,
-      input = input_messages,
-    }),
+    body = vim.fn.json_encode(request_body),
     callback = function(res)
       common.log("Before OpenAI callback call (Responses API)")
       vim.schedule(function()

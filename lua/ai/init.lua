@@ -205,11 +205,17 @@ function M.handle(name, input)
 
   local prompt = M.fill(def.prompt_tpl, args)
   
-  local append_embeded = M.opts.append_embeded_system_instructions
-  if def.append_embeded_system_instructions ~= nil then
-    append_embeded = def.append_embeded_system_instructions
+  -- In standalone mode, skip loading system instructions entirely
+  local instruction = ""
+  if is_heavy then
+    local append_embeded = M.opts.append_embeded_system_instructions
+    if def.append_embeded_system_instructions ~= nil then
+      append_embeded = def.append_embeded_system_instructions
+    end
+    instruction = aiconfig.getSystemInstructions(append_embeded)
+  else
+    common.log("Standalone mode: skipping system instructions loading")
   end
-  local instruction = aiconfig.getSystemInstructions(append_embeded)
 
   local anthropic_model = def.anthropic_model or M.opts.anthropic_model
   local googleai_model = def.googleai_model or M.opts.googleai_model

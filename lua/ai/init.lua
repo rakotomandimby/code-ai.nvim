@@ -138,7 +138,9 @@ function M.fill(tpl, args)
     tpl = ''
   else
     for key, value in pairs(args) do
-      tpl = string.gsub(tpl, '%${' .. key .. '}', value:gsub('%%', '%%%%'))
+      local str_value = (value == nil) and '' or tostring(value)
+      local escaped_value = str_value:gsub('%%', '%%%%')
+      tpl = string.gsub(tpl, '%${' .. key .. '}', escaped_value)
     end
   end
   return tpl

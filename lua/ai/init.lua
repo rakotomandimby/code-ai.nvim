@@ -138,7 +138,7 @@ function M.fill(tpl, args)
     tpl = ''
   else
     for key, value in pairs(args) do
-      tpl = string.gsub(tpl, '%${' .. key .. '}', value)
+      tpl = string.gsub(tpl, '%${' .. key .. '}', value:gsub('%%', '%%%%'))
     end
   end
   return tpl
@@ -421,4 +421,3 @@ vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
 })
 
 return M
-

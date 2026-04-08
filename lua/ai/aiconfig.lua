@@ -36,7 +36,7 @@ function aiconfig.getSystemInstructions(append_embeded)
   end
 
   -- Find the common-system-instructions.md file in the plugin's runtime path
-  local common_instructions_paths = vim.api.nvim_get_runtime_file("lua/ai/common-system-instructions.md", false)
+  local common_instructions_paths = vim.api.nvim_get_runtime_file("lua/ai/common-system-instructions_en.md", false)
   local common_content_found = false
 
   if #common_instructions_paths > 0 then

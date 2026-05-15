@@ -11,31 +11,40 @@ function query.formatResult(data, upload_url, upload_token, upload_as_public)
   common.log("Inside GoogleAI formatResult")
 
   local result = ''
-  local candidates_number = #data['candidates']
+  local steps = data['steps']
 
-  if candidates_number == 1 then
-    if data['candidates'][1]['content'] == nil then
+  if steps == nil or #steps == 0 then
+    if data['error'] then
       result = '\n#GoogleAI error\n\nGoogleAI stopped with the reason: '
-        .. data['candidates'][1]['finishReason'] .. '\n'
-      return result
+        .. (data['error']['message'] or 'unknown') .. '\n'
     else
-      local prompt_tokens = data['usageMetadata']['promptTokenCount'] or 0
-      local answer_tokens = data['usageMetadata']['candidatesTokenCount'] or 0
-
-      local formatted_prompt_tokens = common.formatTokenCount(prompt_tokens)
-      local formatted_answer_tokens = common.formatTokenCount(answer_tokens)
-
-      result = data['candidates'][1]['content']['parts'][1]['text']
-        .. '\n\n'
-        .. 'GoogleAI ' .. modelUsed
-        .. ' (' .. formatted_prompt_tokens .. ' in, ' .. formatted_answer_tokens .. ' out)\n\n'
+      result = '\n#GoogleAI error\n\nUnknown error or empty response.\n'
     end
+    return result
   else
-    result = '# There are ' .. candidates_number .. ' GoogleAI candidates\n'
-    for i = 1, candidates_number do
-      result = result .. '## GoogleAI Candidate number ' .. i .. '\n'
-      result = result .. data['candidates'][i]['content']['parts'][1]['text'] .. '\n'
+    local last_output = nil
+    for i = #steps, 1, -1 do
+      if steps[i].type == "model_output" then
+        last_output = steps[i]
+        break
+      end
     end
+
+    if not last_output or not last_output.content or #last_output.content == 0 then
+      result = '\n#GoogleAI error\n\nNo model output found.\n'
+      return result
+    end
+
+    local prompt_tokens = (data['usage'] and data['usage']['total_input_tokens']) or 0
+    local answer_tokens = (data['usage'] and data['usage']['total_output_tokens']) or 0
+
+    local formatted_prompt_tokens = common.formatTokenCount(prompt_tokens)
+    local formatted_answer_tokens = common.formatTokenCount(answer_tokens)
+
+    result = last_output.content[1].text
+      .. '\n\n'
+      .. 'GoogleAI ' .. modelUsed
+      .. ' (' .. formatted_prompt_tokens .. ' in, ' .. formatted_answer_tokens .. ' out)\n\n'
   end
 
   result = common.insertWordToTitle('GGL', result)
@@ -90,8 +99,8 @@ query.askCallback = function(res, opts)
 end
 
 local disabled_response = {
-  candidates = { { content = { parts = { { text = "GoogleAI models are disabled" } } }, finishReason = "STOP" } },
-  usageMetadata = { promptTokenCount = 0, candidatesTokenCount = 0 }
+  steps = { { type = "model_output", content = { { text = "GoogleAI models are disabled" } } } },
+  usage = { total_input_tokens = 0, total_output_tokens = 0 }
 }
 
 function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, upload_url, upload_token, upload_as_public)
@@ -161,26 +170,21 @@ function query.askLight(model, instruction, prompt, opts, api_key, upload_url, u
   end
 
   local api_host = 'https://generativelanguage.googleapis.com'
-  local path = '/v1beta/models/' .. model .. ':generateContent'
+  local path = '/v1beta/interactions'
 
   -- Build request body - only include system_instruction if instruction is not empty
   local request_body = {
-    contents = {{role = 'user', parts = {{text = prompt}}}},
-    safetySettings = {
-      { category = 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold = 'BLOCK_NONE' },
-      { category = 'HARM_CATEGORY_HATE_SPEECH',       threshold = 'BLOCK_NONE' },
-      { category = 'HARM_CATEGORY_HARASSMENT',        threshold = 'BLOCK_NONE' },
-      { category = 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold = 'BLOCK_NONE' }
-    },
-    generationConfig = {
+    model = model,
+    input = prompt,
+    generation_config = {
       temperature = 0.2,
-      topP = 0.5
+      top_p = 0.5
     }
   }
 
   -- Only add system_instruction field if instruction is provided
   if instruction and instruction ~= '' then
-    request_body.system_instruction = {parts = {text = instruction}}
+    request_body.system_instruction = instruction
   else
     common.log("GoogleAI Light mode: No system instructions provided")
   end

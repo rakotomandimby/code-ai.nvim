@@ -52,7 +52,7 @@ This is the configuration for the plugin:
     dependencies = 'nvim-lua/plenary.nvim',
     opts = {
         anthropic_model = 'claude-3-7-sonnet-latest',
-        googleai_model   = 'gemini-2.0-flash-exp',
+        googleai_model   = 'gemini-3-flash-preview',
         openai_model    = 'gpt-4o-mini',
         github_model    = 'microsoft/phi-4-reasoning',
 
@@ -86,7 +86,7 @@ This is the configuration for the plugin:
                 loading_tpl = 'Loading...',
                 require_input = true,
                 anthropic_model='claude-3-7-sonnet-latest',
-                googleai_model='gemini-2.0-flash-exp',
+                googleai_model='gemini-3-flash-preview',
                 openai_model='gpt-4o-mini',
                 github_model='microsoft/phi-4-reasoning',
             },
@@ -97,7 +97,7 @@ This is the configuration for the plugin:
                 loading_tpl = 'Loading...',
                 require_input = true,
                 anthropic_model='claude-3-7-sonnet-latest',
-                googleai_model='gemini-2.0-flash-exp',
+                googleai_model='gemini-3-flash-preview',
                 openai_model='gpt-4o-mini',
                 github_model='microsoft/phi-4-reasoning',
             },

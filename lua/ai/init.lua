@@ -39,6 +39,8 @@ M.opts = {
   upload_token = '',
   upload_as_public = false,
   append_embeded_system_instructions = true,
+
+  prompt_rewording_model = 'microsoft/phi-4',
 }
 M.prompts = default_prompts
 local win_id
@@ -180,7 +182,7 @@ function M.handle(name, input)
   else
     -- Fallback to global logic: only scan files if all agents are configured
     local all_agents_configured = use_anthropic_agent and use_googleai_agent and use_openai_agent and use_github_agent
-    
+
     if all_agents_configured then
       -- Only scan files if all agents are configured
       number_of_files = #aiconfig.listScannedFilesFromConfig()
@@ -206,7 +208,7 @@ function M.handle(name, input)
   end
 
   local prompt = M.fill(def.prompt_tpl, args)
-  
+
   -- In standalone mode, skip loading system instructions entirely
   local instruction = ""
   if is_heavy then
@@ -416,6 +418,44 @@ function M.setup(opts)
     local update = M.createPopup(instructions, width - 12, height - 8)
     update(instructions)
   end, {})
+
+  -- AIRewordPrompt: reword the selected text (or argument) as a clearer prompt,
+  -- using a Github model in a multi-turn conversation.
+  vim.api.nvim_create_user_command('AIRewordPrompt', function(args)
+    local text = args['args']
+    if isEmpty(text) then
+      text = M.getSelectedText(true)
+    end
+
+    if isEmpty(text) or not M.hasLetters(text) then
+      vim.api.nvim_echo({ { "AIRewordPrompt: no text selected or provided.", "WarningMsg" } }, false, {})
+      return
+    end
+
+    local width = vim.fn.winwidth(0)
+    local height = vim.fn.winheight(0)
+
+    local model = M.opts.prompt_rewording_model
+    if model == nil or model == '' then
+      model = 'microsoft/phi-4'
+    end
+
+    local loading_message = "# Rewording prompt...\n\nUsing Github model `" .. model .. "`.\n\n## Original prompt\n\n" .. text
+    local update = M.createPopup(loading_message, width - 8, height - 4)
+
+    github.askReword(
+      model,
+      text,
+      {
+        handleResult = function(output)
+          update(output)
+          return output
+        end,
+        callback = function(_) end,
+      },
+      M.opts.github_api_key
+    )
+  end, { range = true, nargs = '?' })
 end
 
 vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {

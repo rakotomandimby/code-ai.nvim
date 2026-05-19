@@ -223,5 +223,117 @@ function query.askLight(model, instruction, prompt, opts, api_key, upload_url, u
   })
 end
 
+-- Extract assistant text from a Github Models Chat Completions response
+local function extractAssistantText(data)
+  if type(data) ~= 'table' then return '' end
+  if type(data.choices) == 'table' and #data.choices > 0 then
+    local choice = data.choices[1]
+    if type(choice) == 'table' and type(choice.message) == 'table' then
+      local content = choice.message.content
+      if type(content) == 'string' then
+        return content
+      end
+    end
+  end
+  return ''
+end
+
+-- Format token usage footer
+local function formatRewordFooter(data, model)
+  local prompt_tokens = 0
+  local completion_tokens = 0
+  if type(data.usage) == 'table' then
+    prompt_tokens = data.usage.prompt_tokens or 0
+    completion_tokens = data.usage.completion_tokens or 0
+  end
+  local fin = common.formatTokenCount(prompt_tokens)
+  local fout = common.formatTokenCount(completion_tokens)
+  return '\n\n---\n\nReworded by Github ' .. model .. ' (' .. fin .. ' in, ' .. fout .. ' out)'
+end
+
+-- askReword: multi-turn conversation to reword a user-provided prompt.
+-- This does NOT save history nor upload; it just returns the reworded text via opts.handleResult/opts.callback.
+function query.askReword(model, selected_text, opts, api_key)
+  if model == nil or model == '' then
+    model = 'microsoft/phi-4'
+  end
+
+  if model == "disabled" then
+    vim.schedule(function()
+      local result = "# Reword Prompt\n\nGithub models are disabled."
+      if opts.handleResult then
+        result = opts.handleResult(result) or result
+      end
+      if opts.callback then
+        opts.callback(result)
+      end
+    end)
+    return
+  end
+
+  local api_host = 'https://models.github.ai'
+  local path = '/inference/chat/completions'
+
+  local system_instruction =
+    "You are an assistant that helps users to reword prompts to make them more clear for an AI model to understand. "
+    .. "When the user provides a prompt, respond ONLY with the reworded version of that prompt. "
+    .. "Do not add explanations, preambles, or commentary. Preserve the original intent, language, and any technical details. "
+    .. "Keep code blocks, file paths, and identifiers intact."
+
+  local messages = {
+    { role = 'system',    content = system_instruction },
+    { role = 'user',      content = "I need your help to reword a prompt." },
+    { role = 'assistant', content = "Give me the prompt you want to reword." },
+    { role = 'user',      content = selected_text or '' },
+  }
+
+  common.log("AIRewordPrompt: sending multi-turn reword request to Github model " .. model)
+
+  curl.post(api_host .. path, {
+    headers = {
+      ['Accept'] = 'application/vnd.github+json',
+      ['Authorization'] = 'Bearer ' .. api_key,
+      ['X-GitHub-Api-Version'] = '2022-11-28',
+      ['Content-Type'] = 'application/json',
+    },
+    body = vim.fn.json_encode({
+      model = model,
+      messages = messages,
+    }),
+    callback = function(res)
+      vim.schedule(function()
+        local result
+        if not res or res.status == nil then
+          result = "# Reword Prompt Error\n\nNo response from Github Models API."
+        elseif res.status ~= 200 then
+          result = query.formatError(res.status, res.body or "No response body")
+        else
+          local ok, data = pcall(vim.fn.json_decode, res.body)
+          if not ok or type(data) ~= 'table' then
+            result = "# Reword Prompt Error\n\nFailed to decode JSON response."
+          else
+            local text = extractAssistantText(data)
+            if text == '' then
+              result = "# Reword Prompt Error\n\nEmpty response from model."
+            else
+              result = "# Reworded Prompt\n\n" .. text .. formatRewordFooter(data, model)
+            end
+          end
+        end
+
+        if opts.handleResult then
+          local maybe = opts.handleResult(result)
+          if type(maybe) == 'string' then
+            result = maybe
+          end
+        end
+        if opts.callback then
+          opts.callback(result)
+        end
+      end)
+    end
+  })
+end
+
 return query
 

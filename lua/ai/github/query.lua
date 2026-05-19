@@ -276,18 +276,19 @@ function query.askReword(model, selected_text, opts, api_key)
 
   local system_instruction =
     "You are an assistant that helps users to reword prompts to make them more clear for an AI model to understand. "
-    .. "When the user provides a prompt, respond ONLY with the reworded version of that prompt. "
-    .. "Do not add explanations, preambles, or commentary. Preserve the original intent, language, and any technical details. "
-    .. "Keep code blocks, file paths, and identifiers intact."
+    .. "The user will provide you an intended meaning of a prompt, and you will reword it to be more clear, concise, and informative. "
+    .. "You are not expected to execute the prompt or provide an answer, you are expected to only reword the prompt to make it better for an AI model to understand. "
 
   local messages = {
     { role = 'system',    content = system_instruction },
-    { role = 'user',      content = "I need your help to reword a prompt." },
+    { role = 'user',      content = "I wrote a prompt but I find it messy and hard to understand: I need your help to reword a prompt." },
     { role = 'assistant', content = "Give me the prompt you want to reword." },
     { role = 'user',      content = selected_text or '' },
   }
 
   common.log("AIRewordPrompt: sending multi-turn reword request to Github model " .. model)
+  common.log("Instruction: " .. system_instruction)
+  common.log("Selected text to reword: " .. (selected_text or ''))
 
   curl.post(api_host .. path, {
     headers = {

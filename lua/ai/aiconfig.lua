@@ -69,7 +69,7 @@ function aiconfig.getSystemInstructions(append_embeded)
     if current_file_info and current_file_info.source and current_file_info.source:sub(1,1) == "@" then
         local current_file_path = current_file_info.source:sub(2)
         local plugin_dir = vim.fn.fnamemodify(current_file_path, ":h:h") -- Assuming lua/ai/aiconfig.lua, so :h:h gives plugin root
-        local fallback_path = plugin_dir .. "/lua/ai/common-system-instructions.md" -- Path relative to plugin root
+        local fallback_path = plugin_dir .. "/lua/ai/common-system-instructions_en.md" -- Path relative to plugin root
         common.log("Trying fallback path: " .. fallback_path)
         if vim.fn.filereadable(fallback_path) == 1 then
           local fallback_lines = vim.fn.readfile(fallback_path)

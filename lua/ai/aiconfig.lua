@@ -310,7 +310,7 @@ local function build_table(title, rows, total_lines, total_size_str)
   -- rows: array of { lines_str = "...", size_str = "...", percent_str = "...", name = "..." }
   local header_lines = "LoC"
   local header_size = "Size"
-  local header_percent = "%% size"
+  local header_percent = "% size"
   local header_name = "File name"
 
   local col_lines_width = #header_lines

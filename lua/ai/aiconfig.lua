@@ -280,16 +280,75 @@ local function format_size(size)
   end
 end
 
-local function format_percentage(part, total)
-  if total <= 0 then
-    return "0%"
+-- Count number of lines in a file. Returns 0 if not readable.
+local function count_file_lines(full_path)
+  if vim.fn.filereadable(full_path) ~= 1 then
+    return 0
   end
-  local percentage = (part / total) * 100
-  if percentage >= 10 then
-    return string.format("%.1f%%", percentage)
-  else
-    return string.format("%.2f%%", percentage)
+  local lines = vim.fn.readfile(full_path)
+  if not lines then
+    return 0
   end
+  return #lines
+end
+
+local function pad_right(str, width)
+  if #str >= width then
+    return str
+  end
+  return str .. string.rep(" ", width - #str)
+end
+
+local function pad_left(str, width)
+  if #str >= width then
+    return str
+  end
+  return string.rep(" ", width - #str) .. str
+end
+
+local function build_table(title, rows, total_lines, total_size_str)
+  -- rows: array of { lines_str = "...", size_str = "...", name = "..." }
+  local header_lines = "Nb. lines"
+  local header_size = "Size"
+  local header_name = "File name"
+
+  local col_lines_width = #header_lines
+  local col_size_width = #header_size
+  local col_name_width = #header_name
+
+  for _, row in ipairs(rows) do
+    if #row.lines_str > col_lines_width then col_lines_width = #row.lines_str end
+    if #row.size_str  > col_size_width  then col_size_width  = #row.size_str  end
+    if #row.name      > col_name_width  then col_name_width  = #row.name      end
+  end
+
+  -- Also account for the totals row
+  local total_lines_str = tostring(total_lines)
+  local total_label = "Total (" .. total_size_str .. ")"
+  if #total_lines_str > col_lines_width then col_lines_width = #total_lines_str end
+  if #total_label    > col_name_width  then col_name_width  = #total_label    end
+
+  local out = {}
+  table.insert(out, "## " .. title .. "\n")
+  table.insert(out, "| " .. pad_right(header_lines, col_lines_width)
+    .. " | " .. pad_right(header_size, col_size_width)
+    .. " | " .. pad_right(header_name, col_name_width) .. " |")
+  table.insert(out, "|-" .. string.rep("-", col_lines_width)
+    .. "-|-" .. string.rep("-", col_size_width)
+    .. "-|-" .. string.rep("-", col_name_width) .. "-|")
+
+  for _, row in ipairs(rows) do
+    table.insert(out, "| " .. pad_left(row.lines_str, col_lines_width)
+      .. " | " .. pad_left(row.size_str, col_size_width)
+      .. " | " .. pad_right(row.name, col_name_width) .. " |")
+  end
+
+  -- Totals row
+  table.insert(out, "| " .. pad_left(total_lines_str, col_lines_width)
+    .. " | " .. pad_left("", col_size_width)
+    .. " | " .. pad_right(total_label, col_name_width) .. " |")
+
+  return table.concat(out, "\n")
 end
 
 function aiconfig.listScannedFilesAsFormattedTable()
@@ -302,76 +361,66 @@ function aiconfig.listScannedFilesAsFormattedTable()
 
   local files_data = {}
   local total_size = 0
-  local max_display_length_size = 0
-  local max_display_length_name = 0
+  local total_lines = 0
 
-  common.log("Starting Pass 1: Gathering file data and calculating max display length")
+  common.log("Gathering file data for formatted table (size + line counts)")
   for _, relative_path in ipairs(analyzed_files_paths) do
     local full_path = project_root .. '/' .. relative_path
     local stat = vim.loop.fs_stat(full_path)
     local size = stat and stat.size or 0
+    local nb_lines = count_file_lines(full_path)
     total_size = total_size + size
-    local size_str = format_size(size)
-    local name_display_str = relative_path .. " (" .. size_str .. ")"
-    max_display_length_name = math.max(max_display_length_name, #name_display_str)
+    total_lines = total_lines + nb_lines
     table.insert(files_data, {
       path = relative_path,
       size = size,
-      size_str = size_str,
-      display_name = name_display_str
+      size_str = format_size(size),
+      nb_lines = nb_lines,
+      nb_lines_str = tostring(nb_lines),
     })
-    common.log("Processed: " .. name_display_str .. " (Length: " .. #name_display_str .. ")")
+    common.log("Processed: " .. relative_path .. " (Size: " .. size .. ", Lines: " .. nb_lines .. ")")
   end
-  common.log("Pass 1 Complete. Max display length (name): " .. max_display_length_name)
 
   local total_size_str = format_size(total_size)
+  local num_files = #files_data
 
+  -- Build sorted-by-size (desc) list - files_data is already sorted by size desc
+  local rows_by_size = {}
   for _, data in ipairs(files_data) do
-    local percentage_str = format_percentage(data.size, total_size)
-    data.display_size = data.path .. " (" .. data.size_str .. ", " .. percentage_str .. ")"
-    max_display_length_size = math.max(max_display_length_size, #data.display_size)
+    table.insert(rows_by_size, {
+      lines_str = data.nb_lines_str,
+      size_str = data.size_str,
+      name = data.path,
+    })
   end
-  common.log("Computed percentage contributions for all files.")
 
-  local sorted_by_size = files_data
-
+  -- Build sorted-by-name (asc) list
   local sorted_by_name = {}
   for _, data in ipairs(files_data) do
     table.insert(sorted_by_name, data)
   end
-  table.sort(sorted_by_name, function(a, b)
-    return a.path < b.path
-  end)
+  table.sort(sorted_by_name, function(a, b) return a.path < b.path end)
 
-  common.log("Starting Pass 2: Building Markdown table")
+  local rows_by_name = {}
+  for _, data in ipairs(sorted_by_name) do
+    table.insert(rows_by_name, {
+      lines_str = data.nb_lines_str,
+      size_str = data.size_str,
+      name = data.path,
+    })
+  end
+
   local result_lines = {}
-  table.insert(result_lines, "# A total of " .. total_size_str .. " will be analyzed under project root " .. project_root .. ":\n")
+  table.insert(result_lines,
+    "# Scanned files summary\n\n"
+    .. "- Project root: `" .. project_root .. "`\n"
+    .. "- Number of files: **" .. num_files .. "**\n"
+    .. "- Total size: **" .. total_size_str .. "**\n"
+    .. "- Total lines: **" .. total_lines .. "**\n")
 
-  local header1 = "Sorted by Size (Desc)"
-  local header2 = "Sorted by Name (Asc)"
-
-  local col1_width = math.max(#header1, max_display_length_size)
-  local col2_width = math.max(#header2, max_display_length_name)
-  common.log("Calculated column widths: Col1=" .. col1_width .. ", Col2=" .. col2_width)
-
-  local function pad_right(str, width)
-    if #str >= width then
-      return str
-    end
-    return str .. string.rep(" ", width - #str)
-  end
-
-  table.insert(result_lines, "| " .. pad_right(header1, col1_width) .. " | " .. pad_right(header2, col2_width) .. " |")
-  table.insert(result_lines, "|-" .. string.rep("-", col1_width) .. "-|-" .. string.rep("-", col2_width) .. "-|")
-
-  for i = 1, #sorted_by_size do
-    local display_size = sorted_by_size[i].display_size
-    local display_name = sorted_by_name[i].display_name
-    local padded_display_size = pad_right(display_size, col1_width)
-    local padded_display_name = pad_right(display_name, col2_width)
-    table.insert(result_lines, "| " .. padded_display_size .. " | " .. padded_display_name .. " |")
-  end
-  common.log("Pass 2 Complete. Table built.")
+  table.insert(result_lines, build_table("File list by size (descending)", rows_by_size, total_lines, total_size_str))
+  table.insert(result_lines, "")
+  table.insert(result_lines, build_table("File list by name (ascending)", rows_by_name, total_lines, total_size_str))
 
   return table.concat(result_lines, "\n")
 end

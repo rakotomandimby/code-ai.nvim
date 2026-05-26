@@ -307,18 +307,21 @@ local function pad_left(str, width)
 end
 
 local function build_table(title, rows, total_lines, total_size_str)
-  -- rows: array of { lines_str = "...", size_str = "...", name = "..." }
+  -- rows: array of { lines_str = "...", size_str = "...", percent_str = "...", name = "..." }
   local header_lines = "Nb. lines"
   local header_size = "Size"
+  local header_percent = "Percent size"
   local header_name = "File name"
 
   local col_lines_width = #header_lines
   local col_size_width = #header_size
+  local col_percent_width = #header_percent
   local col_name_width = #header_name
 
   for _, row in ipairs(rows) do
     if #row.lines_str > col_lines_width then col_lines_width = #row.lines_str end
     if #row.size_str  > col_size_width  then col_size_width  = #row.size_str  end
+    if #row.percent_str > col_percent_width then col_percent_width = #row.percent_str end
     if #row.name      > col_name_width  then col_name_width  = #row.name      end
   end
 
@@ -332,21 +335,20 @@ local function build_table(title, rows, total_lines, total_size_str)
   table.insert(out, "## " .. title .. "\n")
   table.insert(out, "| " .. pad_right(header_lines, col_lines_width)
     .. " | " .. pad_right(header_size, col_size_width)
+    .. " | " .. pad_right(header_percent, col_percent_width)
     .. " | " .. pad_right(header_name, col_name_width) .. " |")
   table.insert(out, "|-" .. string.rep("-", col_lines_width)
     .. "-|-" .. string.rep("-", col_size_width)
+    .. "-|-" .. string.rep("-", col_percent_width)
     .. "-|-" .. string.rep("-", col_name_width) .. "-|")
 
   for _, row in ipairs(rows) do
     table.insert(out, "| " .. pad_left(row.lines_str, col_lines_width)
       .. " | " .. pad_left(row.size_str, col_size_width)
+      .. " | " .. pad_left(row.percent_str, col_percent_width)
       .. " | " .. pad_right(row.name, col_name_width) .. " |")
   end
 
-  -- Totals row
-  table.insert(out, "| " .. pad_left(total_lines_str, col_lines_width)
-    .. " | " .. pad_left("", col_size_width)
-    .. " | " .. pad_right(total_label, col_name_width) .. " |")
 
   return table.concat(out, "\n")
 end
@@ -381,6 +383,12 @@ function aiconfig.listScannedFilesAsFormattedTable()
     common.log("Processed: " .. relative_path .. " (Size: " .. size .. ", Lines: " .. nb_lines .. ")")
   end
 
+  -- Calculate percent sizes
+  for _, data in ipairs(files_data) do
+    local percent = total_size > 0 and (data.size / total_size * 100) or 0
+    data.percent_str = string.format("%.2f%%", percent)
+  end
+
   local total_size_str = format_size(total_size)
   local num_files = #files_data
 
@@ -390,6 +398,7 @@ function aiconfig.listScannedFilesAsFormattedTable()
     table.insert(rows_by_size, {
       lines_str = data.nb_lines_str,
       size_str = data.size_str,
+      percent_str = data.percent_str,
       name = data.path,
     })
   end
@@ -406,6 +415,7 @@ function aiconfig.listScannedFilesAsFormattedTable()
     table.insert(rows_by_name, {
       lines_str = data.nb_lines_str,
       size_str = data.size_str,
+      percent_str = data.percent_str,
       name = data.path,
     })
   end

@@ -40,7 +40,7 @@ M.opts = {
   upload_as_public = false,
   append_embeded_system_instructions = true,
 
-  prompt_rewording_model = 'microsoft/phi-4',
+  prompt_rewording_model = 'microsoft/phi-4-reasoning',
 }
 M.prompts = default_prompts
 local win_id
@@ -437,7 +437,7 @@ function M.setup(opts)
 
     local model = M.opts.prompt_rewording_model
     if model == nil or model == '' then
-      model = 'microsoft/phi-4'
+      model = 'microsoft/phi-4-reasoning'
     end
 
     local loading_message = "# Rewording prompt...\n\nUsing Github model `" .. model .. "`.\n\n## Original prompt\n\n" .. text

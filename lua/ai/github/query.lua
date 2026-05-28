@@ -255,7 +255,7 @@ end
 -- This does NOT save history nor upload; it just returns the reworded text via opts.handleResult/opts.callback.
 function query.askReword(model, selected_text, opts, api_key)
   if model == nil or model == '' then
-    model = 'microsoft/phi-4'
+    model = 'microsoft/phi-4-reasoning'
   end
 
   if model == "disabled" then

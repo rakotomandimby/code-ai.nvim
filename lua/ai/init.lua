@@ -464,4 +464,3 @@ vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
 })
 
 return M
-lua/ai/common.lua

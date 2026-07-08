@@ -75,7 +75,7 @@ function common.askCallback(res, opts, formatResult)
       common.log("Error: Failed to decode JSON response: " .. (res.body or "No response body"))
       result = "Error: Failed to decode JSON response from agent."
     else
-      result = formatResult(data, opts.upload_url, opts.upload_token, opts.upload_as_public)
+      result = formatResult(data, opts.upload_url, opts.upload_token, opts.upload_as_public, opts)
     end
   end
 
@@ -135,6 +135,86 @@ function common.handleDisabledModel(provider_name, model_name, opts, askCallback
       }
     )
   end)
+end
+
+-- Calculate input statistics (size in bytes and total line count)
+function common.calculateInputStats(instruction, prompt, project_context)
+  local total_size = 0
+  local total_lines = 0
+
+  local function add_text(text)
+    if type(text) == 'string' and text ~= '' then
+      total_size = total_size + #text
+      local _, count = string.gsub(text, "\n", "")
+      if not string.match(text, "\n$") and #text > 0 then
+        count = count + 1
+      end
+      total_lines = total_lines + count
+    end
+  end
+
+  add_text(instruction)
+  add_text(prompt)
+
+  if project_context then
+    for _, file in ipairs(project_context) do
+      add_text(file.content)
+    end
+  end
+
+  return total_size, total_lines
+end
+
+-- Send token statistics to the ingestion endpoint
+function common.sendIngestionStats(stats, input_tokens, output_tokens)
+  local ai = require('ai')
+  local token = ai.opts.stats_ingestion_token or ""
+
+  if token == "" then
+    common.log("sendIngestionStats: stats_ingestion_token is not configured. Skipping sending stats.")
+    return
+  end
+
+  -- Save fields to local variables
+  local model = stats.model
+  local input_size = stats.input_size
+  local input_lines = stats.input_lines
+
+  -- Clear the fields of the stats object immediately to prevent memory leaks or stale data
+  stats.model = nil
+  stats.input_size = nil
+  stats.input_lines = nil
+
+  local payload = {
+    model = tostring(model or ""),
+    input_size = math.floor(tonumber(input_size) or 0),
+    input_lines = math.floor(tonumber(input_lines) or 0),
+    input_tokens = math.floor(tonumber(input_tokens) or 0),
+    output_tokens = math.floor(tonumber(output_tokens) or 0),
+  }
+
+  if payload.model == "" or string.match(payload.model, "^%s*$") then
+    common.log("sendIngestionStats: Skipping sending stats because model name is empty.")
+    return
+  end
+
+  local url = "https://token-loc-size.m-rktmb.ovh/inject.php"
+  common.log("sendIngestionStats: Sending token stats to " .. url .. ": " .. vim.fn.json_encode(payload))
+
+  curl.post(url, {
+    headers = {
+      ['Content-Type'] = 'application/json',
+      ['Authorization'] = 'Bearer ' .. token,
+    },
+    body = vim.fn.json_encode(payload),
+    callback = function(res)
+      if res.status >= 200 and res.status < 300 then
+        common.log("sendIngestionStats: Successfully sent token stats. Status: " .. res.status .. ", Response: " .. (res.body or ""))
+      else
+        common.log("sendIngestionStats: Failed to send token stats. Status: " .. tostring(res.status) .. ", Response: " .. (res.body or ""))
+      end
+    end
+  })
 end
 
 -- Generic heavy query implementation with iterative state machine for data persistence
@@ -255,7 +335,8 @@ function common.askHeavy(agent_host, api_key, model, instruction, prompt, projec
                 callback = opts.callback,
                 upload_url = opts.upload_url,
                 upload_token = opts.upload_token,
-                upload_as_public = opts.upload_as_public
+                upload_as_public = opts.upload_as_public,
+                stats = opts.stats,
               })
             end)
           else

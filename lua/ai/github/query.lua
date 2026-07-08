@@ -7,7 +7,7 @@ local history = require('ai.history')
 local promptToSave = ""
 local modelUsed = ""
 
-function query.formatResult(data, upload_url, upload_token, upload_as_public)
+function query.formatResult(data, upload_url, upload_token, upload_as_public, opts)
   common.log("Inside Github formatResult")
 
   local function collect_texts(d)
@@ -55,6 +55,12 @@ function query.formatResult(data, upload_url, upload_token, upload_as_public)
     history.saveToHistory('github_' .. modelUsed, promptToSave .. '\n\n' .. result)
     local model_label = 'Github (' .. modelUsed .. ')'
     common.uploadContent(upload_url, upload_token, result, model_label, upload_as_public)
+
+    -- Send ingestion stats!
+    if opts and opts.stats then
+      common.sendIngestionStats(opts.stats, prompt_tokens, completion_tokens)
+      opts.stats = nil
+    end
   else
     common.log("Github model is disabled: skipping history save and upload.")
   end
@@ -93,7 +99,8 @@ query.askCallback = function(res, opts)
       callback = opts.callback,
       upload_url = opts.upload_url,
       upload_token = opts.upload_token,
-      upload_as_public = opts.upload_as_public
+      upload_as_public = opts.upload_as_public,
+      stats = opts.stats,
     },
     query.formatResult
   )
@@ -139,6 +146,14 @@ function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, u
     end
   end
 
+  -- Calculate stats
+  local input_size, input_lines = common.calculateInputStats(instruction, prompt, project_context)
+  opts.stats = {
+    model = model,
+    input_size = input_size,
+    input_lines = input_lines,
+  }
+
   common.askHeavy(
     agent_host,
     api_key,
@@ -151,7 +166,8 @@ function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, u
       callback = opts.callback,
       upload_url = upload_url,
       upload_token = upload_token,
-      upload_as_public = upload_as_public
+      upload_as_public = upload_as_public,
+      stats = opts.stats,
     },
     query.askCallback
   )
@@ -175,6 +191,14 @@ function query.askLight(model, instruction, prompt, opts, api_key, upload_url, u
     )
     return
   end
+
+  -- Calculate stats
+  local input_size, input_lines = common.calculateInputStats(instruction, prompt, nil)
+  opts.stats = {
+    model = model,
+    input_size = input_size,
+    input_lines = input_lines,
+  }
 
   local api_host = 'https://models.github.ai'
   local path = '/inference/chat/completions'
@@ -216,7 +240,8 @@ function query.askLight(model, instruction, prompt, opts, api_key, upload_url, u
           callback = opts.callback,
           upload_url = upload_url,
           upload_token = upload_token,
-          upload_as_public = upload_as_public
+          upload_as_public = upload_as_public,
+          stats = opts.stats,
         })
       end)
     end
@@ -271,6 +296,14 @@ function query.askReword(model, selected_text, opts, api_key)
     return
   end
 
+  -- Calculate stats
+  local input_size, input_lines = common.calculateInputStats(nil, selected_text, nil)
+  opts.stats = {
+    model = model,
+    input_size = input_size,
+    input_lines = input_lines,
+  }
+
   local api_host = 'https://models.github.ai'
   local path = '/inference/chat/completions'
 
@@ -318,6 +351,17 @@ function query.askReword(model, selected_text, opts, api_key)
               result = "# Reword Prompt Error\n\nEmpty response from model."
             else
               result = "# Reworded Prompt\n\n" .. text .. formatRewordFooter(data, model)
+              -- Send stats to ingestion endpoint
+              if opts.stats and model ~= "disabled" then
+                local prompt_tokens = 0
+                local completion_tokens = 0
+                if type(data.usage) == 'table' then
+                  prompt_tokens = data.usage.prompt_tokens or 0
+                  completion_tokens = data.usage.completion_tokens or 0
+                end
+                common.sendIngestionStats(opts.stats, prompt_tokens, completion_tokens)
+                opts.stats = nil
+              end
             end
           end
         end

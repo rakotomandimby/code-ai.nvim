@@ -7,7 +7,7 @@ local history = require('ai.history')
 local promptToSave = ""
 local modelUsed = ""
 
-function query.formatResult(data, upload_url, upload_token, upload_as_public)
+function query.formatResult(data, upload_url, upload_token, upload_as_public, opts)
   common.log("Inside OpenAI formatResult")
 
   local function collect_texts(d)
@@ -71,6 +71,12 @@ function query.formatResult(data, upload_url, upload_token, upload_as_public)
     history.saveToHistory('openai_' .. modelUsed, promptToSave .. '\n\n' .. result)
     local model_label = 'OpenAI (' .. modelUsed .. ')'
     common.uploadContent(upload_url, upload_token, result, model_label, upload_as_public)
+
+    -- Send ingestion stats!
+    if opts and opts.stats then
+      common.sendIngestionStats(opts.stats, prompt_tokens, completion_tokens)
+      opts.stats = nil
+    end
   else
     common.log("OpenAI model is disabled: skipping history save and upload.")
   end
@@ -113,7 +119,8 @@ query.askCallback = function(res, opts)
       callback = opts.callback,
       upload_url = opts.upload_url,
       upload_token = opts.upload_token,
-      upload_as_public = opts.upload_as_public
+      upload_as_public = opts.upload_as_public,
+      stats = opts.stats,
     },
     query.formatResult
   )
@@ -160,6 +167,14 @@ function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, u
     end
   end
 
+  -- Calculate stats
+  local input_size, input_lines = common.calculateInputStats(instruction, prompt, project_context)
+  opts.stats = {
+    model = model,
+    input_size = input_size,
+    input_lines = input_lines,
+  }
+
   common.askHeavy(
     agent_host,
     api_key,
@@ -172,7 +187,8 @@ function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, u
       callback = opts.callback,
       upload_url = upload_url,
       upload_token = upload_token,
-      upload_as_public = upload_as_public
+      upload_as_public = upload_as_public,
+      stats = opts.stats,
     },
     query.askCallback
   )
@@ -196,6 +212,14 @@ function query.askLight(model, instruction, prompt, opts, api_key, upload_url, u
     )
     return
   end
+
+  -- Calculate stats
+  local input_size, input_lines = common.calculateInputStats(instruction, prompt, nil)
+  opts.stats = {
+    model = model,
+    input_size = input_size,
+    input_lines = input_lines,
+  }
 
   local api_host = 'https://api.openai.com'
   local path = '/v1/responses'
@@ -236,7 +260,8 @@ function query.askLight(model, instruction, prompt, opts, api_key, upload_url, u
           callback = opts.callback,
           upload_url = upload_url,
           upload_token = upload_token,
-          upload_as_public = upload_as_public
+          upload_as_public = upload_as_public,
+          stats = opts.stats,
         })
       end)
     end

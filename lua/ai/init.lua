@@ -41,6 +41,7 @@ M.opts = {
   append_embeded_system_instructions = true,
 
   prompt_rewording_model = 'microsoft/phi-4-reasoning',
+  stats_ingestion_token = '',
 }
 M.prompts = default_prompts
 local win_id
@@ -463,4 +464,4 @@ vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
 })
 
 return M
-
+lua/ai/common.lua

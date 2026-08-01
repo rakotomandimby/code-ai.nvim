@@ -1,7 +1,6 @@
 local anthropic = require('ai.anthropic.query')
 local googleai = require('ai.googleai.query')
 local openai = require('ai.openai.query')
-local github = require('ai.github.query')
 local aiconfig = require('ai.aiconfig')
 local common = require('ai.common')
 
@@ -20,17 +19,14 @@ M.opts = {
   anthropic_model = '',
   googleai_model = '',
   openai_model = '',
-  github_model = '',
 
   anthropic_agent_host = '',
   googleai_agent_host = '',
   openai_agent_host = '',
-  github_agent_host = '',
 
   anthropic_api_key = '',
   googleai_api_key = '',
   openai_api_key = '',
-  github_api_key = '',
 
   locale = 'en',
   alternate_locale = 'fr',
@@ -40,7 +36,6 @@ M.opts = {
   upload_as_public = false,
   append_embeded_system_instructions = true,
 
-  prompt_rewording_model = 'microsoft/phi-4-reasoning',
   stats_ingestion_token = '',
 }
 M.prompts = default_prompts
@@ -165,7 +160,6 @@ function M.handle(name, input)
   local use_anthropic_agent = M.opts.anthropic_agent_host ~= ''
   local use_googleai_agent = M.opts.googleai_agent_host ~= ''
   local use_openai_agent = M.opts.openai_agent_host ~= ''
-  local use_github_agent = M.opts.github_agent_host ~= ''
 
   -- Determine the query mode: per-command override or global logic
   local query_mode = def.query_mode
@@ -182,7 +176,7 @@ function M.handle(name, input)
     number_of_files = #aiconfig.listScannedFilesFromConfig()
   else
     -- Fallback to global logic: only scan files if all agents are configured
-    local all_agents_configured = use_anthropic_agent and use_googleai_agent and use_openai_agent and use_github_agent
+    local all_agents_configured = use_anthropic_agent and use_googleai_agent and use_openai_agent
 
     if all_agents_configured then
       -- Only scan files if all agents are configured
@@ -225,7 +219,6 @@ function M.handle(name, input)
   local anthropic_model = def.anthropic_model or M.opts.anthropic_model
   local googleai_model = def.googleai_model or M.opts.googleai_model
   local openai_model = def.openai_model or M.opts.openai_model
-  local github_model = def.github_model or M.opts.github_model
 
   -- If command-level models are set, use them
   if def.anthropic_model and def.anthropic_model ~= '' then
@@ -236,9 +229,6 @@ function M.handle(name, input)
   end
   if def.openai_model and def.openai_model ~= '' then
     openai_model = def.openai_model
-  end
-  if def.github_model and def.github_model ~= '' then
-    github_model = def.github_model
   end
 
   -- START: Prepare common options for all LLM queries, including upload details
@@ -251,7 +241,7 @@ function M.handle(name, input)
 
   local function handleResult(output, output_key)
     args[output_key] = output
-    args.output = (args.anthropic_output or '').. (args.googleai_output or '') .. (args.openai_output or '') .. (args.github_output or '')
+    args.output = (args.anthropic_output or '').. (args.googleai_output or '') .. (args.openai_output or '')
     update(M.fill(def.result_tpl or '${output}', args))
     return output
   end
@@ -275,7 +265,6 @@ function M.handle(name, input)
   local askHandleResultAndCallbackAnthropic = createProviderOpts('anthropic_output')
   local askHandleResultAndCallbackGoogleAI = createProviderOpts('googleai_output')
   local askHandleResultAndCallbackOpenAI = createProviderOpts('openai_output')
-  local askHandleResultAndCallbackGithub = createProviderOpts('github_output')
 
   if not is_heavy then
     anthropic.askLight(
@@ -304,16 +293,6 @@ function M.handle(name, input)
       prompt,
       askHandleResultAndCallbackOpenAI,
       M.opts.openai_api_key,
-      common_query_opts.upload_url,
-      common_query_opts.upload_token,
-      common_query_opts.upload_as_public
-    )
-    github.askLight(
-      github_model,
-      instruction,
-      prompt,
-      askHandleResultAndCallbackGithub,
-      M.opts.github_api_key,
       common_query_opts.upload_url,
       common_query_opts.upload_token,
       common_query_opts.upload_as_public
@@ -352,17 +331,6 @@ function M.handle(name, input)
       common_query_opts.upload_token,
       common_query_opts.upload_as_public
     )
-    github.askHeavy(
-      github_model,
-      instruction,
-      prompt,
-      askHandleResultAndCallbackGithub,
-      M.opts.github_api_key,
-      M.opts.github_agent_host,
-      common_query_opts.upload_url,
-      common_query_opts.upload_token,
-      common_query_opts.upload_as_public
-    )
   end
 end
 
@@ -397,11 +365,11 @@ function M.setup(opts)
     end
   end
 
-  if M.opts.anthropic_model == '' or  M.opts.googleai_model == '' or M.opts.openai_model == '' or M.opts.github_model == '' then
-    error('You need to set anthropic_model, googleai_model, openai_model, and github_model')
+  if M.opts.anthropic_model == '' or M.opts.googleai_model == '' or M.opts.openai_model == '' then
+    error('You need to set anthropic_model, googleai_model, and openai_model')
   end
-  if M.opts.anthropic_api_key ==''or M.opts.googleai_api_key == '' or M.opts.openai_api_key == '' or M.opts.github_api_key == '' then
-    error('You need to set anthropic_api_key, googleai_api_key, openai_api_key, and github_api_key')
+  if M.opts.anthropic_api_key == '' or M.opts.googleai_api_key == '' or M.opts.openai_api_key == '' then
+    error('You need to set anthropic_api_key, googleai_api_key, and openai_api_key')
   end
 
   vim.api.nvim_create_user_command('AIListScannedFiles', function()
@@ -419,44 +387,6 @@ function M.setup(opts)
     local update = M.createPopup(instructions, width - 12, height - 8)
     update(instructions)
   end, {})
-
-  -- AIRewordPrompt: reword the selected text (or argument) as a clearer prompt,
-  -- using a Github model in a multi-turn conversation.
-  vim.api.nvim_create_user_command('AIRewordPrompt', function(args)
-    local text = args['args']
-    if isEmpty(text) then
-      text = M.getSelectedText(true)
-    end
-
-    if isEmpty(text) or not M.hasLetters(text) then
-      vim.api.nvim_echo({ { "AIRewordPrompt: no text selected or provided.", "WarningMsg" } }, false, {})
-      return
-    end
-
-    local width = vim.fn.winwidth(0)
-    local height = vim.fn.winheight(0)
-
-    local model = M.opts.prompt_rewording_model
-    if model == nil or model == '' then
-      model = 'microsoft/phi-4-reasoning'
-    end
-
-    local loading_message = "# Rewording prompt...\n\nUsing Github model `" .. model .. "`.\n\n## Original prompt\n\n" .. text
-    local update = M.createPopup(loading_message, width - 8, height - 4)
-
-    github.askReword(
-      model,
-      text,
-      {
-        handleResult = function(output)
-          update(output)
-          return output
-        end,
-        callback = function(_) end,
-      },
-      M.opts.github_api_key
-    )
-  end, { range = true, nargs = '?' })
 end
 
 vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
@@ -464,3 +394,4 @@ vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
 })
 
 return M
+

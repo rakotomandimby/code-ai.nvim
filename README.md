@@ -6,7 +6,7 @@ Thank you Gerald for your work.
 
 # code-ai.nvim
 
-A Neovim plugin powered by GoogleAI Gemini, OpenAI ChatGPT, Anthropic Claude, and Github Models to help you write code.
+A Neovim plugin powered by GoogleAI Gemini, OpenAI ChatGPT, and Anthropic Claude to help you write code, with an Ollama-powered prompt rewording command.
 
 Here is a demo without using the agents:
 
@@ -38,11 +38,12 @@ First get API keys from
 - [Google Cloud](https://ai.google.dev/gemini-api/docs/api-key) 
 - [ChatGPT](https://platform.openai.com/api-keys)
 - [Anthropic](https://console.anthropic.com/settings/keys)
-- [Github Models](https://github.com/marketplace/models)
 
-For usage **WITHOUT** the agents, **don't set** the `googleai_agent_host` nor `openai_agent_host` nor `anthropic_agent_host` nor `github_agent_host`.
+For usage **WITHOUT** the agents, **don't set** the `googleai_agent_host`, `openai_agent_host`, or `anthropic_agent_host`.
 
-For usage **WITH** the agents, **set** the `googleai_agent_host` and `openai_agent_host` and `anthropic_agent_host` and `github_agent_host` to the URLs of the agents.
+For usage **WITH** the agents, **set** the `googleai_agent_host`, `openai_agent_host`, and `anthropic_agent_host` to the URLs of the agents.
+
+If you want to use prompt rewording with Ollama, also set `ollama_host` and `ollama_model`.
 
 This is the configuration for the plugin:
 
@@ -54,12 +55,10 @@ This is the configuration for the plugin:
         anthropic_model = 'claude-3-7-sonnet-latest',
         googleai_model   = 'gemini-3-flash-preview',
         openai_model    = 'gpt-4o-mini',
-        github_model    = 'microsoft/phi-4-reasoning',
 
         anthropic_api_key = 'YOUR_ANTHROPIC_API_KEY',      -- or read from env: `os.getenv('ANTHROPIC_API_KEY')`
         googleai_api_key  = 'YOUR_GOOGLEAI_API_KEY',       -- or read from env: `os.getenv('GOOGLEAI_API_KEY')`
         openai_api_key    = 'YOUR_OPENAI_API_KEY',         -- or read from env: `os.getenv('OPENAI_API_KEY')`
-        github_api_key    = 'YOUR_GITHUB_API_KEY',         -- or read from env: `os.getenv('GITHUB_TOKEN')`
 
         anthropic_agent_host = 'http://172.16.76.1:6000',    -- don't set if you don't want to use the agent
                                                              -- if you set, make sure the agents are running
@@ -67,8 +66,8 @@ This is the configuration for the plugin:
                                                              -- if you set, make sure the agents are running
         openai_agent_host    = 'http://172.16.76.1:4000',    -- don't set if you don't want to use the agent
                                                              -- if you set, make sure the agents are running
-        github_agent_host    = 'http://172.16.76.1:7000',    -- don't set if you don't want to use the agent
-                                                             -- if you set, make sure the agents are running
+        ollama_host          = 'http://172.16.76.1:11434',   -- optional, used by :AIRewordPrompt
+        ollama_model         = 'llama3.2',                   -- optional, used by :AIRewordPrompt
         result_popup_gets_focus = true,
 
         -- New configuration option to control appending embedded system instructions
@@ -88,7 +87,6 @@ This is the configuration for the plugin:
                 anthropic_model='claude-3-7-sonnet-latest',
                 googleai_model='gemini-3-flash-preview',
                 openai_model='gpt-4o-mini',
-                github_model='microsoft/phi-4-reasoning',
             },
             php_bare = {
                 command = 'AIPhpBare',
@@ -99,7 +97,6 @@ This is the configuration for the plugin:
                 anthropic_model='claude-3-7-sonnet-latest',
                 googleai_model='gemini-3-flash-preview',
                 openai_model='gpt-4o-mini',
-                github_model='microsoft/phi-4-reasoning',
             },
         },
     },
@@ -114,6 +111,11 @@ If you have configured the plugin following the instructions above, you can use 
 - Pressing `:` to enter the command mode
 - Typing `AIJavascriptVanilla` or `AIPhpBare` and pressing `Enter`
 
+To reword a prompt locally through Ollama:
+- Select a text in normal mode
+- Press `:` to enter the command mode
+- Type `AIRewordPrompt` and press `Enter`
+
 # Configuration Options
 
 | Option                          | Type    | Default | Description                                                                                          |
@@ -121,15 +123,14 @@ If you have configured the plugin following the instructions above, you can use 
 | `anthropic_model`               | string  | `''`    | The model to use for the Anthropic Claude API.                                                     |
 | `googleai_model`                | string  | `''`    | The model to use for the GoogleAI Gemini API.                                                      |
 | `openai_model`                  | string  | `''`    | The model to use for the OpenAI ChatGPT API.                                                       |
-| `github_model`                  | string  | `''`    | The model to use for the Github Models API.                                                        |
 | `anthropic_api_key`             | string  | `''`    | The API key for the Anthropic Claude API.                                                          |
 | `googleai_api_key`              | string  | `''`    | The API key for the GoogleAI Gemini API.                                                           |
 | `openai_api_key`                | string  | `''`    | The API key for the OpenAI ChatGPT API.                                                            |
-| `github_api_key`                | string  | `''`    | The API key for the Github Models API.                                                             |
 | `anthropic_agent_host`          | string  | `''`    | The host URL of the Anthropic Claude agent.                                                        |
 | `googleai_agent_host`           | string  | `''`    | The host URL of the GoogleAI Gemini agent.                                                         |
 | `openai_agent_host`             | string  | `''`    | The host URL of the OpenAI ChatGPT agent.                                                          |
-| `github_agent_host`             | string  | `''`    | The host URL of the Github Models agent.                                                           |
+| `ollama_host`                   | string  | `''`    | The Ollama host URL used by `:AIRewordPrompt`.                                                     |
+| `ollama_model`                  | string  | `''`    | The Ollama model used by `:AIRewordPrompt`.                                                        |
 | `result_popup_gets_focus`       | boolean | `false` | Whether the result popup window should get focus when opened.                                      |
 | `upload_url`                   | string  | `''`    | URL to upload the AI response content.                                                             |
 | `upload_token`                 | string  | `''`    | Token used for authenticating uploads.                                                             |
@@ -140,20 +141,19 @@ If you have configured the plugin following the instructions above, you can use 
 
 The prompts will be merged into built-in prompts. Here are the available fields for each prompt:
 
+`ollama_host` and `ollama_model` are global plugin options used only by `:AIRewordPrompt`; they are not prompt-level fields.
+
 | Fields                 | Required | Description                                                                                      |
 | ---------------------- | -------- | ------------------------------------------------------------------------------------------------ |
 | `googleai_model`       | Yes      | The model to use for the GoogleAI Gemini API. Set it to 'disabled' if you don't want to use it.  |
 | `openai_model`         | Yes      | The model to use for the OpenAI ChatGPT API. Set it to 'disabled' if you don't want to use it.   |
 | `anthropic_model`      | Yes      | The model to use for the Anthropic Claude API. Set it to 'disabled' if you don't want to use it. |
-| `github_model`         | Yes      | The model to use for the Github Models API. Set it to 'disabled' if you don't want to use it.    |
 | `googleai_api_key`     | Yes      | The API key for the GoogleAI Gemini API.                                                         |
 | `openai_api_key`       | Yes      | The API key for the OpenAI ChatGPT API.                                                          |
 | `anthropic_api_key`    | Yes      | The API key for the Anthropic Claude API.                                                        |
-| `github_api_key`       | Yes      | The API key for the Github Models API.                                                           |
 | `googleai_agent_host`  | No       | The host of the GoogleAI Gemini agent.                                                           |
 | `openai_agent_host`    | No       | The host of the OpenAI ChatGPT agent.                                                            |
 | `anthropic_agent_host` | No       | The host of the Anthropic Claude agent.                                                          |
-| `github_agent_host`    | No       | The host of the Github Models agent.                                                             |
 | `command`              | Yes      | A user command will be created for this prompt.                                                  |
 | `loading_tpl`          | No       | Template for content shown when communicating with Gemini. See below for available placeholders. |
 | `prompt_tpl`           | Yes      | Template for the prompt string passed to Gemini. See below for available placeholders.           |
@@ -171,4 +171,3 @@ Placeholders can be used in templates. If not available, it will be left as is.
 # License
 
 MIT License
-

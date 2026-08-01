@@ -16,13 +16,18 @@ function reword.reword(prompt, opts, callback)
   if vim.endswith(host, "/") then
     host = host:sub(1, -2)
   end
-
+  local system_message = [[ 
+    You are a helpful assistant that is in charge of rewording prompts, to infer and enumerate the requirements, constraints, and any other relevant information that will help the model to generate an accurate and complete response.
+    Be carefull to not change the global idea of the prompt, but to make it more clear and detailed for an AI model to understand and generate a better response.
+    You infer the requirements and constraints from the prompt, and you enumerate them in a clear and structured way.
+    You do not try to execute the prompt, you only reword it to make it more clear and detailed.
+    ]]
   local url = host .. "/api/chat"
   local payload = {
     model = model,
     stream = false,
     messages = {
-      { role = "system", content = "You are a helpful assistant that is in charge of rewording prompts to enumerate the requirements, constraints, and any other relevant information that will help the model to generate an accurate and complete response." },
+      { role = "system", content = system_message },
       { role = "user", content = "I need your help to reword a prompt." },
       { role = "assistant", content = "Provide me with the prompt you would like to reword, and I will assist you in elaborating it." },
       { role = "user", content = prompt },

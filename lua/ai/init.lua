@@ -1,6 +1,7 @@
 local anthropic = require('ai.anthropic.query')
 local googleai = require('ai.googleai.query')
 local openai = require('ai.openai.query')
+local ollama_reword = require('ai.ollama.reword')
 local aiconfig = require('ai.aiconfig')
 local common = require('ai.common')
 
@@ -27,6 +28,9 @@ M.opts = {
   anthropic_api_key = '',
   googleai_api_key = '',
   openai_api_key = '',
+
+  ollama_host = '',
+  ollama_model = '',
 
   locale = 'en',
   alternate_locale = 'fr',
@@ -334,6 +338,16 @@ function M.handle(name, input)
   end
 end
 
+function M.rewordPrompt(input)
+  local width = vim.fn.winwidth(0)
+  local height = vim.fn.winheight(0)
+  local update = M.createPopup("Rewording prompt with Ollama...", width - 8, height - 4)
+
+  ollama_reword.reword(input, M.opts, function(result)
+    update(result)
+  end)
+end
+
 function M.assign(table, other)
   for k, v in pairs(other) do
     table[k] = v
@@ -371,6 +385,16 @@ function M.setup(opts)
   if M.opts.anthropic_api_key == '' or M.opts.googleai_api_key == '' or M.opts.openai_api_key == '' then
     error('You need to set anthropic_api_key, googleai_api_key, and openai_api_key')
   end
+
+  vim.api.nvim_create_user_command('AIRewordPrompt', function(args)
+    local text = args['args']
+    if isEmpty(text) then
+      text = M.getSelectedText(true)
+    end
+    if M.hasLetters(text) then
+      M.rewordPrompt(text)
+    end
+  end, { range = true, nargs = '?' })
 
   vim.api.nvim_create_user_command('AIListScannedFiles', function()
     local width = vim.fn.winwidth(0)

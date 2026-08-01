@@ -141,6 +141,8 @@ To reword a prompt locally through Ollama:
 
 The prompts will be merged into built-in prompts. Here are the available fields for each prompt:
 
+`ollama_host` and `ollama_model` are global plugin options used only by `:AIRewordPrompt`; they are not prompt-level fields.
+
 | Fields                 | Required | Description                                                                                      |
 | ---------------------- | -------- | ------------------------------------------------------------------------------------------------ |
 | `googleai_model`       | Yes      | The model to use for the GoogleAI Gemini API. Set it to 'disabled' if you don't want to use it.  |

@@ -9,7 +9,7 @@ local modelUsed = ""
 
 function query.formatResult(data, upload_url, upload_token, upload_as_public, opts)
   common.log("Inside Anthropic formatResult")
-
+  common.log("###### Data received: " .. vim.inspect(data))
   local input_tokens = data.usage.input_tokens or 0
   local output_tokens = data.usage.output_tokens or 0
 

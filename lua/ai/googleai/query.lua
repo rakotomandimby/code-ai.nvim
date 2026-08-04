@@ -1,27 +1,51 @@
-local curl = require('plenary.curl')
-local aiconfig = require('ai.aiconfig')
 local common = require('ai.common')
+local provider = require('ai.provider')
+
 local query = {}
-local history = require('ai.history')
 
-local promptToSave = ""
-local modelUsed = ""
-
-function query.formatResult(data, upload_url, upload_token, upload_as_public, opts)
-  common.log("Inside GoogleAI formatResult")
-
-  local result = ''
-  local steps = data['steps']
-
-  if steps == nil or #steps == 0 then
-    if data['error'] then
-      result = '\n#GoogleAI error\n\nGoogleAI stopped with the reason: '
-        .. (data['error']['message'] or 'unknown') .. '\n'
+local googleai_runner = provider.createQueryRunner({
+  name = "GoogleAI",
+  title_tag = "GGL",
+  history_prefix = "googleai_",
+  api_host = 'https://generativelanguage.googleapis.com',
+  api_path = '/v1beta/interactions',
+  disabled_response = {
+    steps = { { type = "model_output", content = { { text = "GoogleAI models are disabled" } } } },
+    usage = { total_input_tokens = 0, total_output_tokens = 0 }
+  },
+  build_headers = function(api_key)
+    return {
+      ['Content-type'] = 'application/json',
+      ['x-goog-api-key'] = api_key
+    }
+  end,
+  build_request_body = function(model, instruction, prompt)
+    local request_body = {
+      model = model,
+      input = prompt,
+      generation_config = {
+        temperature = 0.2,
+        top_p = 0.5
+      }
+    }
+    if instruction and instruction ~= '' then
+      request_body.system_instruction = instruction
     else
-      result = '\n#GoogleAI error\n\nUnknown error or empty response.\n'
+      common.log("GoogleAI Light mode: No system instructions provided")
     end
-    return result
-  else
+    return request_body
+  end,
+  validate_data = function(data)
+    local steps = data['steps']
+    if steps == nil or #steps == 0 then
+      if data['error'] then
+        return '\n#GoogleAI error\n\nGoogleAI stopped with the reason: '
+          .. (data['error']['message'] or 'unknown') .. '\n'
+      else
+        return '\n#GoogleAI error\n\nUnknown error or empty response.\n'
+      end
+    end
+
     local last_output = nil
     for i = #steps, 1, -1 do
       if steps[i].type == "model_output" then
@@ -31,207 +55,51 @@ function query.formatResult(data, upload_url, upload_token, upload_as_public, op
     end
 
     if not last_output or not last_output.content or #last_output.content == 0 then
-      result = '\n#GoogleAI error\n\nNo model output found.\n'
-      return result
+      return '\n#GoogleAI error\n\nNo model output found.\n'
     end
 
-    local prompt_tokens = (data['usage'] and data['usage']['total_input_tokens']) or 0
-    local answer_tokens = (data['usage'] and data['usage']['total_output_tokens']) or 0
-
-    local formatted_prompt_tokens = common.formatTokenCount(prompt_tokens)
-    local formatted_answer_tokens = common.formatTokenCount(answer_tokens)
-
-    result = last_output.content[1].text
-      .. '\n\n'
-      .. 'GoogleAI ' .. modelUsed
-      .. ' (' .. formatted_prompt_tokens .. ' in, ' .. formatted_answer_tokens .. ' out)\n\n'
-
-    result = common.insertWordToTitle('GGL', result)
-
-    -- For disabled models, do not write history nor upload.
-    if modelUsed ~= 'disabled' then
-      history.saveToHistory('googleai_' .. modelUsed, promptToSave .. '\n\n' .. result)
-      common.uploadContent(upload_url, upload_token, result, 'GoogleAI (' .. modelUsed .. ')', upload_as_public)
-
-      -- Send ingestion stats!
-      if opts and opts.stats then
-        common.sendIngestionStats(opts.stats, prompt_tokens, answer_tokens)
-        opts.stats = nil
+    return nil
+  end,
+  extract_usage = function(data)
+    local usage = data.usage or {}
+    return usage.total_input_tokens or 0, usage.total_output_tokens or 0
+  end,
+  extract_content = function(data)
+    local steps = data['steps'] or {}
+    for i = #steps, 1, -1 do
+      if steps[i].type == "model_output" and steps[i].content and steps[i].content[1] then
+        return steps[i].content[1].text or ""
       end
+    end
+    return ""
+  end,
+  format_error = function(status, body)
+    common.log("Formatting GoogleAI API error: " .. body)
+    local success, error_data = pcall(vim.fn.json_decode, body)
+
+    if success and error_data and error_data.error then
+      local error_code = error_data.error.code or status
+      local error_message = error_data.error.message or "Unknown error occurred"
+      local error_status = error_data.error.status or "ERROR"
+      return string.format(
+        "# GoogleAI API Error (%s)\n\n**Error Code**: %s\n**Status**: %s\n**Message**: %s\n",
+        status,
+        error_code,
+        error_status,
+        error_message
+      )
     else
-      common.log("GoogleAI model is disabled: skipping history save and upload.")
+      return string.format("# GoogleAI API Error (%s)\n\n```\n%s\n```", status, body)
     end
   end
-
-  return result
-end
-
-function query.formatError(status, body)
-  common.log("Formatting GoogleAI API error: " .. body)
-  local error_result
-  local success, error_data = pcall(vim.fn.json_decode, body)
-
-  if success and error_data and error_data.error then
-    local error_code = error_data.error.code or status
-    local error_message = error_data.error.message or "Unknown error occurred"
-    local error_status = error_data.error.status or "ERROR"
-    error_result = string.format(
-      "# GoogleAI API Error (%s)\n\n**Error Code**: %s\n**Status**: %s\n**Message**: %s\n",
-      status,
-      error_code,
-      error_status,
-      error_message
-    )
-  else
-    error_result = string.format("# GoogleAI API Error (%s)\n\n```\n%s\n```", status, body)
-  end
-  return error_result
-end
-
-query.askCallback = function(res, opts)
-  local handleError = query.formatError
-  common.askCallback(
-    res,
-    {
-      handleResult = opts.handleResult,
-      handleError = handleError,
-      callback = opts.callback,
-      upload_url = opts.upload_url,
-      upload_token = opts.upload_token,
-      upload_as_public = opts.upload_as_public,
-      stats = opts.stats,
-    },
-    query.formatResult
-  )
-end
-
-local disabled_response = {
-  steps = { { type = "model_output", content = { { text = "GoogleAI models are disabled" } } } },
-  usage = { total_input_tokens = 0, total_output_tokens = 0 }
-}
+})
 
 function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, upload_url, upload_token, upload_as_public)
-  promptToSave = prompt
-  modelUsed = model
-
-  if model == "disabled" then
-    common.handleDisabledModel('GoogleAI', model,
-      {
-        handleResult = opts.handleResult,
-        callback = opts.callback,
-        upload_url = upload_url,
-        upload_token = upload_token,
-        upload_as_public = upload_as_public
-      },
-      query.askCallback,
-      disabled_response
-    )
-    return
-  end
-
-  local scanned_files = aiconfig.listScannedFilesFromConfig()
-  local project_context = {}
-
-  for _, context in pairs(scanned_files) do
-    local content = aiconfig.contentOf(context)
-    if content ~= nil then
-      table.insert(project_context, {filename = context, content = content})
-    end
-  end
-
-  -- Calculate stats
-  local input_size, input_lines = common.calculateInputStats(instruction, prompt, project_context)
-  opts.stats = {
-    model = model,
-    input_size = input_size,
-    input_lines = input_lines,
-  }
-
-  common.askHeavy(
-    agent_host,
-    api_key,
-    model,
-    instruction,
-    prompt,
-    project_context,
-    {
-      handleResult = opts.handleResult,
-      callback = opts.callback,
-      upload_url = upload_url,
-      upload_token = upload_token,
-      upload_as_public = upload_as_public,
-      stats = opts.stats,
-    },
-    query.askCallback
-  )
+  googleai_runner.askHeavy(model, instruction, prompt, opts, api_key, agent_host, upload_url, upload_token, upload_as_public)
 end
 
 function query.askLight(model, instruction, prompt, opts, api_key, upload_url, upload_token, upload_as_public)
-  promptToSave = prompt
-  modelUsed = model
-
-  if model == "disabled" then
-    common.handleDisabledModel('GoogleAI', model,
-      {
-        handleResult = opts.handleResult,
-        callback = opts.callback,
-        upload_url = upload_url,
-        upload_token = upload_token,
-        upload_as_public = upload_as_public
-      },
-      query.askCallback,
-      disabled_response
-    )
-    return
-  end
-
-  -- Calculate stats
-  local input_size, input_lines = common.calculateInputStats(instruction, prompt, nil)
-  opts.stats = {
-    model = model,
-    input_size = input_size,
-    input_lines = input_lines,
-  }
-
-  local api_host = 'https://generativelanguage.googleapis.com'
-  local path = '/v1beta/interactions'
-
-  -- Build request body - only include system_instruction if instruction is not empty
-  local request_body = {
-    model = model,
-    input = prompt,
-    generation_config = {
-      temperature = 0.2,
-      top_p = 0.5
-    }
-  }
-
-  -- Only add system_instruction field if instruction is provided
-  if instruction and instruction ~= '' then
-    request_body.system_instruction = instruction
-  else
-    common.log("GoogleAI Light mode: No system instructions provided")
-  end
-
-  curl.post(api_host .. path, {
-    headers = {
-      ['Content-type'] = 'application/json',
-      ['x-goog-api-key'] = api_key
-    },
-    body = vim.fn.json_encode(request_body),
-    callback = function(res)
-      vim.schedule(function()
-        query.askCallback(res, {
-          handleResult = opts.handleResult,
-          callback = opts.callback,
-          upload_url = upload_url,
-          upload_token = upload_token,
-          upload_as_public = upload_as_public,
-          stats = opts.stats,
-        })
-      end)
-    end
-  })
+  googleai_runner.askLight(model, instruction, prompt, opts, api_key, upload_url, upload_token, upload_as_public)
 end
 
 return query

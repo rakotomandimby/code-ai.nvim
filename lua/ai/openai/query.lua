@@ -1,28 +1,70 @@
-local curl = require('plenary.curl')
-local aiconfig = require('ai.aiconfig')
 local common = require('ai.common')
+local provider = require('ai.provider')
+
 local query = {}
-local history = require('ai.history')
 
-local promptToSave = ""
-local modelUsed = ""
+local openai_runner = provider.createQueryRunner({
+  name = "OpenAI",
+  title_tag = "OPN",
+  history_prefix = "openai_",
+  api_host = 'https://api.openai.com',
+  api_path = '/v1/responses',
+  disabled_response = {
+    output = {
+      { type = "message", role = "assistant", content = { { type = "output_text", text = "" } } },
+      { type = "message", role = "assistant", content = { { type = "output_text", text = "OpenAI models are disabled" } } },
+    },
+    usage = {
+      input_tokens = 0,
+      output_tokens = 0,
+      total_tokens = 0,
+    },
+  },
+  build_headers = function(api_key)
+    return {
+      ['Content-type'] = 'application/json',
+      ['Authorization'] = 'Bearer ' .. api_key,
+    }
+  end,
+  build_request_body = function(model, instruction, prompt)
+    local input_messages = {
+      {
+        role = 'user',
+        content = {
+          { type = 'input_text', text = prompt }
+        }
+      }
+    }
 
-function query.formatResult(data, upload_url, upload_token, upload_as_public, opts)
-  common.log("Inside OpenAI formatResult")
+    local request_body = {
+      model = model,
+      input = input_messages,
+    }
 
-  local function collect_texts(d)
+    if instruction and instruction ~= '' then
+      request_body.instructions = instruction
+    else
+      common.log("OpenAI Light mode: No system instructions provided")
+    end
+    return request_body
+  end,
+  extract_usage = function(data)
+    local usage = type(data.usage) == 'table' and data.usage or {}
+    return usage.input_tokens or 0, usage.output_tokens or 0
+  end,
+  extract_content = function(data)
     local out = {}
 
-    if type(d.output_text) == 'string' and d.output_text ~= '' then
-      table.insert(out, d.output_text)
-    elseif type(d.output_text) == 'table' then
-      for _, s in ipairs(d.output_text) do
+    if type(data.output_text) == 'string' and data.output_text ~= '' then
+      table.insert(out, data.output_text)
+    elseif type(data.output_text) == 'table' then
+      for _, s in ipairs(data.output_text) do
         if type(s) == 'string' and s ~= '' then table.insert(out, s) end
       end
     end
 
-    if type(d.output) == 'table' then
-      for _, item in ipairs(d.output) do
+    if type(data.output) == 'table' then
+      for _, item in ipairs(data.output) do
         if type(item) == 'table' then
           if type(item.text) == 'string' and item.text ~= '' then
             table.insert(out, item.text)
@@ -47,225 +89,38 @@ function query.formatResult(data, upload_url, upload_token, upload_as_public, op
       end
     end
 
-    return out
-  end
+    return table.concat(out, "\n\n")
+  end,
+  format_error = function(status, body)
+    common.log("Formatting OpenAI API error: " .. body)
+    local success, error_data = pcall(vim.fn.json_decode, body)
 
-  local prompt_tokens = type(data.usage) == 'table' and (data.usage.input_tokens or 0) or 0
-  local completion_tokens = type(data.usage) == 'table' and (data.usage.output_tokens or 0) or 0
+    if success and error_data and error_data.error then
+      local error_type = error_data.error.type or "unknown_error"
+      local error_message = error_data.error.message or "Unknown error occurred"
+      local error_code = error_data.error.code or ""
+      local error_param = error_data.error.param or ""
 
-  local formatted_prompt_tokens = common.formatTokenCount(prompt_tokens)
-  local formatted_completion_tokens = common.formatTokenCount(completion_tokens)
-
-  local pieces = collect_texts(data)
-  local text = table.concat(pieces, "\n\n")
-
-  local result = text
-    .. '\n\n'
-    .. 'OpenAI ' .. modelUsed
-    .. ' (' .. formatted_prompt_tokens .. ' in, ' .. formatted_completion_tokens .. ' out)\n\n'
-
-  result = common.insertWordToTitle('OPN', result)
-
-  -- For disabled models, do not write history nor upload.
-  if modelUsed ~= 'disabled' then
-    history.saveToHistory('openai_' .. modelUsed, promptToSave .. '\n\n' .. result)
-    local model_label = 'OpenAI (' .. modelUsed .. ')'
-    common.uploadContent(upload_url, upload_token, result, model_label, upload_as_public)
-
-    -- Send ingestion stats!
-    if opts and opts.stats then
-      common.sendIngestionStats(opts.stats, prompt_tokens, completion_tokens)
-      opts.stats = nil
+      local error_result = string.format("# OpenAI API Error (%s)\n\n**Error Type**: %s\n", status, error_type)
+      if error_code ~= "" then
+        error_result = error_result .. string.format("**Error Code**: %s\n", error_code)
+      end
+      if error_param ~= "" then
+        error_result = error_result .. string.format("**Parameter**: %s\n", error_param)
+      end
+      return error_result .. string.format("**Message**: %s\n", error_message)
+    else
+      return string.format("# OpenAI API Error (%s)\n\n```\n%s\n```", status, body)
     end
-  else
-    common.log("OpenAI model is disabled: skipping history save and upload.")
   end
-
-  return result
-end
-
-function query.formatError(status, body)
-  common.log("Formatting OpenAI API error: " .. body)
-  local error_result
-  local success, error_data = pcall(vim.fn.json_decode, body)
-
-  if success and error_data and error_data.error then
-    local error_type = error_data.error.type or "unknown_error"
-    local error_message = error_data.error.message or "Unknown error occurred"
-    local error_code = error_data.error.code or ""
-    local error_param = error_data.error.param or ""
-
-    error_result = string.format("# OpenAI API Error (%s)\n\n**Error Type**: %s\n", status, error_type)
-    if error_code ~= "" then
-      error_result = error_result .. string.format("**Error Code**: %s\n", error_code)
-    end
-    if error_param ~= "" then
-      error_result = error_result .. string.format("**Parameter**: %s\n", error_param)
-    end
-    error_result = error_result .. string.format("**Message**: %s\n", error_message)
-  else
-    error_result = string.format("# OpenAI API Error (%s)\n\n```\n%s\n```", status, body)
-  end
-  return error_result
-end
-
-query.askCallback = function(res, opts)
-  local handleError = query.formatError
-  common.askCallback(
-    res,
-    {
-      handleResult = opts.handleResult,
-      handleError = handleError,
-      callback = opts.callback,
-      upload_url = opts.upload_url,
-      upload_token = opts.upload_token,
-      upload_as_public = opts.upload_as_public,
-      stats = opts.stats,
-    },
-    query.formatResult
-  )
-end
-
-local disabled_response = {
-  output = {
-    { type = "message", role = "assistant", content = { { type = "output_text", text = "" } } },
-    { type = "message", role = "assistant", content = { { type = "output_text", text = "OpenAI models are disabled" } } },
-  },
-  usage = {
-    input_tokens = 0,
-    output_tokens = 0,
-    total_tokens = 0,
-  },
-}
+})
 
 function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, upload_url, upload_token, upload_as_public)
-  promptToSave = prompt
-  modelUsed = model
-
-  if model == "disabled" then
-    common.handleDisabledModel('OpenAI', model,
-      {
-        handleResult = opts.handleResult,
-        callback = opts.callback,
-        upload_url = upload_url,
-        upload_token = upload_token,
-        upload_as_public = upload_as_public
-      },
-      query.askCallback,
-      disabled_response
-    )
-    return
-  end
-
-  local scanned_files = aiconfig.listScannedFilesFromConfig()
-  local project_context = {}
-
-  for _, context in pairs(scanned_files) do
-    local content = aiconfig.contentOf(context)
-    if content ~= nil then
-      table.insert(project_context, {filename = context, content = content})
-    end
-  end
-
-  -- Calculate stats
-  local input_size, input_lines = common.calculateInputStats(instruction, prompt, project_context)
-  opts.stats = {
-    model = model,
-    input_size = input_size,
-    input_lines = input_lines,
-  }
-
-  common.askHeavy(
-    agent_host,
-    api_key,
-    model,
-    instruction,
-    prompt,
-    project_context,
-    {
-      handleResult = opts.handleResult,
-      callback = opts.callback,
-      upload_url = upload_url,
-      upload_token = upload_token,
-      upload_as_public = upload_as_public,
-      stats = opts.stats,
-    },
-    query.askCallback
-  )
+  openai_runner.askHeavy(model, instruction, prompt, opts, api_key, agent_host, upload_url, upload_token, upload_as_public)
 end
 
 function query.askLight(model, instruction, prompt, opts, api_key, upload_url, upload_token, upload_as_public)
-  promptToSave = prompt
-  modelUsed = model
-
-  if model == "disabled" then
-    common.handleDisabledModel('OpenAI', model,
-      {
-        handleResult = opts.handleResult,
-        callback = opts.callback,
-        upload_url = upload_url,
-        upload_token = upload_token,
-        upload_as_public = upload_as_public
-      },
-      query.askCallback,
-      disabled_response
-    )
-    return
-  end
-
-  -- Calculate stats
-  local input_size, input_lines = common.calculateInputStats(instruction, prompt, nil)
-  opts.stats = {
-    model = model,
-    input_size = input_size,
-    input_lines = input_lines,
-  }
-
-  local api_host = 'https://api.openai.com'
-  local path = '/v1/responses'
-
-  local input_messages = {
-    {
-      role = 'user',
-      content = {
-        { type = 'input_text', text = prompt }
-      }
-    }
-  }
-
-  -- Build request body - only include instructions if instruction is not empty
-  local request_body = {
-    model = model,
-    input = input_messages,
-  }
-
-  -- Only add instructions field if instruction is provided
-  if instruction and instruction ~= '' then
-    request_body.instructions = instruction
-  else
-    common.log("OpenAI Light mode: No system instructions provided")
-  end
-
-  curl.post(api_host .. path, {
-    headers = {
-      ['Content-type'] = 'application/json',
-      ['Authorization'] = 'Bearer ' .. api_key,
-    },
-    body = vim.fn.json_encode(request_body),
-    callback = function(res)
-      common.log("Before OpenAI callback call (Responses API)")
-      vim.schedule(function()
-        query.askCallback(res, {
-          handleResult = opts.handleResult,
-          callback = opts.callback,
-          upload_url = upload_url,
-          upload_token = upload_token,
-          upload_as_public = upload_as_public,
-          stats = opts.stats,
-        })
-      end)
-    end
-  })
+  openai_runner.askLight(model, instruction, prompt, opts, api_key, upload_url, upload_token, upload_as_public)
 end
 
 return query

@@ -79,7 +79,7 @@ function M.createQueryRunner(config)
     )
   end
 
-  function runner.askHeavy(model, instruction, prompt, opts, api_key, agent_host, upload_url, upload_token, upload_as_public)
+  function runner.askHeavy(model, instruction, prompt, opts, api_key, agent_host, upload_url, upload_token, upload_as_public, scanned_files)
     if model == "disabled" then
       common.handleDisabledModel(config.name, model,
         {
@@ -97,10 +97,10 @@ function M.createQueryRunner(config)
       return
     end
 
-    local scanned_files = aiconfig.listScannedFilesFromConfig()
+    local scanned_files_list = scanned_files or aiconfig.listScannedFilesFromConfig()
     local project_context = {}
 
-    for _, context in pairs(scanned_files) do
+    for _, context in pairs(scanned_files_list) do
       local content = aiconfig.contentOf(context)
       if content ~= nil then
         table.insert(project_context, { filename = context, content = content })

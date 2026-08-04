@@ -169,6 +169,7 @@ function M.handle(name, input)
   local query_mode = def.query_mode
   local is_heavy = false
   local number_of_files = 0
+  local scanned_files_list = nil
 
   if query_mode == "standalone" then
     is_heavy = false
@@ -177,14 +178,16 @@ function M.handle(name, input)
     is_heavy = true
     common.log("Using agent mode (forced by command configuration)")
     -- Only scan files if agent mode is forced
-    number_of_files = #aiconfig.listScannedFilesFromConfig()
+    scanned_files_list = aiconfig.listScannedFilesFromConfig()
+    number_of_files = #scanned_files_list
   else
     -- Fallback to global logic: only scan files if all agents are configured
     local all_agents_configured = use_anthropic_agent and use_googleai_agent and use_openai_agent
 
     if all_agents_configured then
       -- Only scan files if all agents are configured
-      number_of_files = #aiconfig.listScannedFilesFromConfig()
+      scanned_files_list = aiconfig.listScannedFilesFromConfig()
+      number_of_files = #scanned_files_list
       is_heavy = (number_of_files > 0)
       if is_heavy then
         common.log("Using agent mode (all agents configured and files found)")
@@ -202,7 +205,7 @@ function M.handle(name, input)
   if not is_heavy then
     update = M.createPopup(M.fill(def.loading_tpl , args), width - 8, height - 4)
   else
-    local scanned_files = aiconfig.listScannedFilesAsFormattedTable()
+    local scanned_files = aiconfig.listScannedFilesAsFormattedTable(scanned_files_list)
     update = M.createPopup(M.fill(def.loading_tpl .. scanned_files, args), width - 8, height - 4)
   end
 
@@ -311,7 +314,8 @@ function M.handle(name, input)
       M.opts.anthropic_agent_host,
       common_query_opts.upload_url,
       common_query_opts.upload_token,
-      common_query_opts.upload_as_public
+      common_query_opts.upload_as_public,
+      scanned_files_list
     )
     googleai.askHeavy(
       googleai_model,
@@ -322,7 +326,8 @@ function M.handle(name, input)
       M.opts.googleai_agent_host,
       common_query_opts.upload_url,
       common_query_opts.upload_token,
-      common_query_opts.upload_as_public
+      common_query_opts.upload_as_public,
+      scanned_files_list
     )
     openai.askHeavy(
       openai_model,
@@ -333,7 +338,8 @@ function M.handle(name, input)
       M.opts.openai_agent_host,
       common_query_opts.upload_url,
       common_query_opts.upload_token,
-      common_query_opts.upload_as_public
+      common_query_opts.upload_as_public,
+      scanned_files_list
     )
   end
 end

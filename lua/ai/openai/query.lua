@@ -115,8 +115,8 @@ local openai_runner = provider.createQueryRunner({
   end
 })
 
-function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, upload_url, upload_token, upload_as_public)
-  openai_runner.askHeavy(model, instruction, prompt, opts, api_key, agent_host, upload_url, upload_token, upload_as_public)
+function query.askHeavy(model, instruction, prompt, opts, api_key, agent_host, upload_url, upload_token, upload_as_public, scanned_files)
+  openai_runner.askHeavy(model, instruction, prompt, opts, api_key, agent_host, upload_url, upload_token, upload_as_public, scanned_files)
 end
 
 function query.askLight(model, instruction, prompt, opts, api_key, upload_url, upload_token, upload_as_public)

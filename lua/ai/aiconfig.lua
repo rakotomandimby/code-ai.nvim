@@ -353,8 +353,8 @@ local function build_table(title, rows, total_lines, total_size_str)
   return table.concat(out, "\n")
 end
 
-function aiconfig.listScannedFilesAsFormattedTable()
-  local analyzed_files_paths = aiconfig.listScannedFilesFromConfig()
+function aiconfig.listScannedFilesAsFormattedTable(scanned_files_paths)
+  local analyzed_files_paths = scanned_files_paths or aiconfig.listScannedFilesFromConfig()
   local project_root = aiconfig.getProjectRoot()
 
   if #analyzed_files_paths == 0 then
